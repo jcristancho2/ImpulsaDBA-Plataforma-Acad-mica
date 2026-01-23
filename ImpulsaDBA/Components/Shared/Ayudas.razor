@@ -1,0 +1,208 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using ImpulsaDBA.Models
+@using CurrieTechnologies.Razor.SweetAlert2
+@inject SweetAlertService Swal
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="ayudas-dropdown-container" @ref="containerRef">
+    <button class="ayudas-button" @onclick="ToggleDropdown">
+        <span class="ayudas-icon-wrapper">
+            <i class="bi bi-info"></i>
+        </span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+    
+    @if (mostrarDropdown)
+    {
+        <div class="ayudas-dropdown">
+            @if (PDF != null && !string.IsNullOrEmpty(PDF.UrlAyuda))
+            {
+                <a href="@PDF.UrlAyuda" target="_blank" class="ayudas-dropdown-item" @onclick="() => OnItemClick(PDF.UrlAyuda)">
+                    PDF
+                </a>
+            }
+            @if (VIDEO != null && !string.IsNullOrEmpty(VIDEO.UrlAyuda))
+            {
+                <a href="@VIDEO.UrlAyuda" target="_blank" class="ayudas-dropdown-item" @onclick="() => OnItemClick(VIDEO.UrlAyuda)">
+                    Video
+                </a>
+            }
+            @if ((PDF == null || string.IsNullOrEmpty(PDF.UrlAyuda)) && (VIDEO == null || string.IsNullOrEmpty(VIDEO.UrlAyuda)))
+            {
+                <div class="ayudas-dropdown-item ayudas-dropdown-item-disabled">
+                    No hay ayudas disponibles
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code
+{
+    private string IdComponente = "002";
+    private ElementReference containerRef;
+    private DotNetObjectReference<Ayudas>? objRef;
+    
+    private Ayuda? PDF { get; set; }
+    private Ayuda? VIDEO { get; set; }
+    private bool mostrarDropdown = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Implementar cuando exista UnitOfWork
+        // (PDF, VIDEO) = await UnitOfWork.Ayudas.GetAyudasPorComponente(IdComponente);
+        
+        // Por ahora, inicializar con valores null
+        PDF = null;
+        VIDEO = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (mostrarDropdown)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("setupAyudasDropdown", containerRef, objRef);
+        }
+        else if (!mostrarDropdown && objRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("removeAyudasDropdown", containerRef);
+        }
+    }
+
+    [JSInvokable]
+    public void CloseDropdown()
+    {
+        mostrarDropdown = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleDropdown()
+    {
+        mostrarDropdown = !mostrarDropdown;
+        if (!mostrarDropdown && objRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("removeAyudasDropdown", containerRef);
+        }
+    }
+
+    private void OnItemClick(string url)
+    {
+        mostrarDropdown = false;
+        // La navegación se maneja con el href del enlace
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (objRef != null)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("removeAyudasDropdown", containerRef);
+            }
+            catch { }
+            objRef.Dispose();
+        }
+    }
+}
+
+<style>
+    .ayudas-dropdown-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .ayudas-button {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: #006bb7;
+        border: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        position: relative;
+        gap: 4px;
+        padding: 0;
+    }
+
+    .ayudas-button:hover {
+        background-color: #005a9e;
+    }
+
+    .ayudas-icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        background-color: #006bb7;
+        border-radius: 50%;
+        position: relative;
+    }
+    
+    .ayudas-icon-wrapper i {
+        font-size: 0.85rem;
+        color: white;
+        line-height: 1;
+        font-weight: bold;
+    }
+    
+    .ayudas-button i:last-child {
+        font-size: 0.85rem;
+        margin-left: 2px;
+        color: white;
+    }
+
+    .ayudas-button i:last-child {
+        font-size: 0.75rem;
+        margin-left: 2px;
+        color: #ffffff;
+    }
+
+    .ayudas-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        min-width: 120px;
+        z-index: 1000;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+    }
+
+    .ayudas-dropdown-item {
+        display: block;
+        padding: 12px 16px;
+        color: #333;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+
+    .ayudas-dropdown-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .ayudas-dropdown-item-disabled {
+        color: #999;
+        cursor: not-allowed;
+    }
+
+    .ayudas-dropdown-item-disabled:hover {
+        background-color: transparent;
+    }
+</style>
+    

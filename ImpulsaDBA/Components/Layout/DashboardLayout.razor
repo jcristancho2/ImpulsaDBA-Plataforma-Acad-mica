@@ -1,0 +1,232 @@
+@namespace ImpulsaDBA.Components.Layout
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using Blazored.LocalStorage
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject AsignaturaService AsignaturaService
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar @(isCollapsed ? "collapsed" : "")">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="logo-icon">M</div>
+            </div>
+            <div class="sidebar-title">Menú</div>
+            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="@(isCollapsed ? "Expandir" : "Colapsar")">
+                <span class="toggle-icon">@(isCollapsed ? "→" : "←")</span>
+            </button>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="/dashboard/inicio" class="nav-item @(GetActiveClass("/dashboard/inicio"))">
+                <i class="bi bi-house-fill nav-icon"></i>
+                <span class="nav-text">Inicio</span>
+            </a>
+            <a href="/dashboard/asignaturas" class="nav-item @(GetActiveClass("/dashboard/asignaturas"))">
+                <i class="bi bi-book-fill nav-icon"></i>
+                <span class="nav-text">Mis Asignaturas</span>
+            </a>
+            <a href="/dashboard/calendario" class="nav-item @(GetActiveClass("/dashboard/calendario"))">
+                <i class="bi bi-calendar3 nav-icon"></i>
+                <span class="nav-text">Calendario</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+
+            <button class="nav-item nav-logout" @onclick="Salir">
+                <i class="bi bi-box-arrow-right nav-icon"></i>
+                <span class="nav-text">Salir</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="dashboard-main">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <div class="search-container">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Buscar asignaturas..." />
+                </div>
+            </div>
+            
+            <div class="header-center">
+                @if (authState != null && authState.User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="user-info">
+                        <span class="user-role">@GetUserRole()</span>
+                        <span class="user-name">@GetUserName()</span>
+                        <span class="user-institution">@GetUserInstitution()</span>
+                    </div>
+                }
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="dashboard-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private AuthenticationState? authState;
+    private bool isCollapsed = false;
+    private const string SIDEBAR_STATE_KEY = "sidebar_collapsed";
+    private string nombreInstitucion = "INSTITUCIÓN EDUCATIVA";
+
+    protected override async Task OnInitializedAsync()
+    {
+        authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        
+        // Cargar estado del sidebar desde LocalStorage
+        try
+        {
+            var savedState = await LocalStorage.GetItemAsync<bool>(SIDEBAR_STATE_KEY);
+            isCollapsed = savedState;
+        }
+        catch
+        {
+            // Si hay error, usar estado por defecto (expandido)
+            isCollapsed = false;
+        }
+
+        // Obtener nombre de institución desde BD (usando las asignaturas asignadas al docente)
+        try
+        {
+            var userIdClaim = authState?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int profesorId))
+            {
+                // Reutilizamos la misma lógica que alimenta las cards del dashboard
+                var asignaturasProfesor = await AsignaturaService.ObtenerAsignaturasPorProfesor(profesorId);
+                var primera = asignaturasProfesor.FirstOrDefault();
+                if (primera is not null && !string.IsNullOrWhiteSpace(primera.Institucion))
+                    nombreInstitucion = primera.Institucion;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al obtener nombre de institución: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleSidebar()
+    {
+        isCollapsed = !isCollapsed;
+        // Guardar estado en LocalStorage
+        try
+        {
+            await LocalStorage.SetItemAsync(SIDEBAR_STATE_KEY, isCollapsed);
+        }
+        catch
+        {
+            // Si hay error al guardar, continuar sin guardar
+        }
+        StateHasChanged();
+    }
+
+
+    private string GetActiveClass(string path)
+    {
+        var currentPath = Navigation.Uri.Replace(Navigation.BaseUri, "").Split('?')[0];
+        return currentPath == path || currentPath.StartsWith(path + "/") ? "active" : "";
+    }
+
+    private string GetUserName()
+    {
+        var fullName = authState?.User?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Usuario";
+        
+        if (string.IsNullOrEmpty(fullName) || fullName == "Usuario")
+            return fullName;
+        
+        // Obtener primer apellido y primer nombre
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            // Si hay 2 partes: Nombre Apellido -> Apellido Nombre
+            if (parts.Length == 2)
+            {
+                return $"{parts[1]} {parts[0]}";
+            }
+            // Si hay 3 o más partes: asumimos que el último es apellido y el primero es nombre
+            // Ejemplo: "Juan Carlos Pérez" -> "Pérez Juan"
+            else
+            {
+                return $"{parts[parts.Length - 1]} {parts[0]}";
+            }
+        }
+        return parts[0];
+    }
+
+    private string GetUserRole()
+    {
+        var perfil = authState?.User?.FindFirst("Perfil")?.Value ?? "Usuario";
+        // Mapear perfiles de la BD a nombres más amigables
+        return perfil switch
+        {
+            "Docente" or "Profesor" => "Docente",
+            "Estudiante" => "Estudiante",
+            "Padre" or "Acudiente" => "Acudiente",
+            _ => perfil
+        };
+    }
+
+    private string GetUserInstitution()
+    {
+        return nombreInstitucion;
+    }
+
+    private string GetUserPhotoUrl()
+    {
+        return authState?.User?.FindFirst("FotoUrl")?.Value ?? string.Empty;
+    }
+
+    private string GetUserInitials()
+    {
+        var fullName = authState?.User?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Usuario";
+        if (string.IsNullOrEmpty(fullName) || fullName == "Usuario") return "U";
+        
+        // Obtener solo el primer nombre y primer apellido para las iniciales
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return fullName[0].ToString().ToUpper();
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task Salir()
+    {
+        try
+        {
+            // Resetear AuthState usando CustomAuthStateProvider
+            if (AuthStateProvider is CustomAuthStateProvider customProvider)
+            {
+                await customProvider.CerrarSesionAsync();
+            }
+
+            // Limpiar LocalStorage completamente
+            await LocalStorage.ClearAsync();
+
+            // Redireccionar a Login
+            Navigation.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cerrar sesión: {ex.Message}");
+            // Aún así redirigir al login
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+}

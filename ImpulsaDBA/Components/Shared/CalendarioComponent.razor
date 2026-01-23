@@ -1,0 +1,1061 @@
+@using ImpulsaDBA.Models
+@using System.Globalization
+@inject CalendarioService CalendarioService
+
+<div class="calendario-container">
+    <!-- Header del Calendario -->
+    <div class="calendario-header">
+        <div class="calendario-header-left">
+            <button class="btn-nav" @onclick="PeriodoAnterior" title="@ObtenerTituloBotonAnterior()">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <div class="calendario-title">
+                <h2>@ObtenerTituloVista()</h2>
+            </div>
+            <button class="btn-nav" @onclick="PeriodoSiguiente" title="@ObtenerTituloBotonSiguiente()">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+        <div class="calendario-vistas">
+            <button class="btn-vista @(vistaActual == VistaCalendario.Semana ? "activa" : "")" 
+                    @onclick="() => CambiarVista(VistaCalendario.Semana)">
+                <i class="bi bi-calendar-week"></i>
+                <span>Semana</span>
+            </button>
+            <button class="btn-vista @(vistaActual == VistaCalendario.Mes ? "activa" : "")" 
+                    @onclick="() => CambiarVista(VistaCalendario.Mes)">
+                <i class="bi bi-calendar-month"></i>
+                <span>Mes</span>
+            </button>
+            <button class="btn-vista @(vistaActual == VistaCalendario.Año ? "activa" : "")" 
+                    @onclick="() => CambiarVista(VistaCalendario.Año)">
+                <i class="bi bi-calendar"></i>
+                <span>Año</span>
+            </button>
+        </div>
+    </div>
+
+    @if (vistaActual == VistaCalendario.Semana)
+    {
+        <!-- Vista Semanal -->
+        <div class="calendario-dias-semana">
+            <div class="dia-semana">L</div>
+            <div class="dia-semana">M</div>
+            <div class="dia-semana">X</div>
+            <div class="dia-semana">J</div>
+            <div class="dia-semana">V</div>
+            <div class="dia-semana">S</div>
+            <div class="dia-semana">D</div>
+        </div>
+        <div class="calendario-grid calendario-semana">
+            @foreach (var dia in diasSemana)
+            {
+                <div class="calendario-dia-semana 
+                            @(dia.EsHoy ? "dia-hoy" : "") 
+                            @(dia.EsFestivo ? "dia-festivo" : "")
+                            @(dia.TieneActividades ? "dia-con-actividades" : "")"
+                     @onclick="() => OnDiaClick(dia.Fecha)">
+                    <div class="dia-semana-header">
+                        <span class="dia-numero">@dia.Fecha.Day</span>
+                        <span class="dia-nombre">@dia.Fecha.ToString("ddd", new CultureInfo("es-ES"))</span>
+                    </div>
+                    @if (dia.TieneActividades)
+                    {
+                        <div class="actividades-lista">
+                            @foreach (var actividad in dia.Actividades)
+                            {
+                                <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
+                                     style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad);"
+                                     title="@actividad.TipoActividad"
+                                     @onclick="() => OnActividadClick(actividad)"
+                                     @onclick:stopPropagation="true">
+                                    <span class="actividad-texto">@TruncarTexto(actividad.TipoActividad)</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (vistaActual == VistaCalendario.Mes)
+    {
+        <!-- Vista Mensual -->
+        <div class="calendario-dias-semana">
+            <div class="dia-semana">L</div>
+            <div class="dia-semana">M</div>
+            <div class="dia-semana">X</div>
+            <div class="dia-semana">J</div>
+            <div class="dia-semana">V</div>
+            <div class="dia-semana">S</div>
+            <div class="dia-semana">D</div>
+        </div>
+        <div class="calendario-grid">
+            @foreach (var dia in diasCalendario)
+            {
+                <div class="calendario-dia 
+                            @(dia.EsDelMesActual ? "" : "dia-otro-mes") 
+                            @(dia.EsHoy ? "dia-hoy" : "") 
+                            @(dia.EsFestivo ? "dia-festivo" : "")
+                            @(dia.TieneActividades ? "dia-con-actividades" : "")"
+                     @onclick="() => OnDiaClick(dia.Fecha)">
+                    <span class="dia-numero">@dia.Fecha.Day</span>
+                    @if (dia.TieneActividades && dia.Actividades.Any())
+                    {
+                        <div class="actividades-lista-mensual">
+                            @foreach (var actividad in dia.Actividades.Take(2))
+                            {
+                                <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
+                                     style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad);"
+                                     title="@actividad.TipoActividad"
+                                     @onclick="() => OnActividadClick(actividad)"
+                                     @onclick:stopPropagation="true">
+                                    <span class="actividad-texto">@TruncarTexto(actividad.TipoActividad)</span>
+                                </div>
+                            }
+                            @if (dia.Actividades.Count > 2)
+                            {
+                                <div class="actividad-item actividad-mas" 
+                                     title="@string.Join(", ", dia.Actividades.Skip(2).Select(a => a.TipoActividad))"
+                                     @onclick="() => OnActividadClick(dia.Actividades.Skip(2).First())"
+                                     @onclick:stopPropagation="true">
+                                    <span class="actividad-texto">+@(dia.Actividades.Count - 2)</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (vistaActual == VistaCalendario.Año)
+    {
+        <!-- Vista Anual -->
+        <div class="calendario-anual">
+            @foreach (var mes in mesesAnio)
+            {
+                <div class="mes-anual">
+                    <h3 class="mes-titulo">@mes.Nombre</h3>
+                    <div class="mes-grid">
+                        @foreach (var dia in mes.Dias)
+                        {
+                            <div class="dia-anual 
+                                        @(dia.EsDelMesActual ? "" : "dia-otro-mes") 
+                                        @(dia.EsHoy && dia.EsDelMesActual ? "dia-hoy" : "")
+                                        @(dia.TieneActividades && dia.EsDelMesActual ? "dia-con-actividades" : "")"
+                                 @onclick="@(dia.EsDelMesActual ? () => OnDiaClick(dia.Fecha) : null)"
+                                 style="@(!dia.EsDelMesActual ? "cursor: not-allowed;" : "")">
+                                <span class="dia-numero">@dia.Fecha.Day</span>
+                                @if (dia.TieneActividades && dia.EsDelMesActual)
+                                {
+                                    <div class="indicador-actividades" title="@dia.CantidadActividades actividad(es)">
+                                        <i class="bi bi-circle-fill"></i>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .calendario-container {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px var(--color-shadow);
+    }
+
+    .calendario-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .calendario-header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+
+    .calendario-vistas {
+        display: flex;
+        gap: 0.5rem;
+        background-color: var(--color-bg-secondary);
+        padding: 0.25rem;
+        border-radius: var(--border-radius-md);
+    }
+
+    .btn-vista {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        border-radius: var(--border-radius-sm);
+        transition: all var(--transition-fast);
+        font-size: 0.9rem;
+    }
+
+    .btn-vista:hover {
+        background-color: var(--color-bg-primary);
+        color: var(--color-text-primary);
+    }
+
+    .btn-vista.activa {
+        background-color: var(--color-primary);
+        color: white;
+    }
+
+    .btn-vista i {
+        font-size: 1rem;
+    }
+
+    .btn-nav {
+        background: none;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-md);
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: var(--color-text-primary);
+        transition: all var(--transition-fast);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-nav:hover {
+        background-color: var(--color-bg-secondary);
+        border-color: var(--color-primary);
+    }
+
+    .btn-nav i {
+        font-size: 1.2rem;
+    }
+
+    .calendario-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        text-transform: capitalize;
+    }
+
+    .calendario-dias-semana {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .dia-semana {
+        text-align: center;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    .calendario-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+    }
+
+    .calendario-semana {
+        grid-template-columns: repeat(7, 1fr);
+    }
+
+    .calendario-dia-semana {
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-md);
+        padding: 0.75rem;
+        min-height: 200px;
+        background-color: var(--color-bg-primary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendario-dia-semana:hover {
+        background-color: var(--color-bg-secondary);
+        border-color: var(--color-primary);
+    }
+
+    .dia-semana-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .dia-nombre {
+        font-size: 0.85rem;
+        color: var(--color-text-secondary);
+        text-transform: capitalize;
+    }
+
+    .actividades-lista {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        overflow-y: auto;
+    }
+
+    .actividad-item {
+        display: flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.75rem;
+        color: white;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        position: relative;
+        line-height: 1.2;
+        max-width: 100%;
+    }
+
+    .actividad-item:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+    }
+
+    .actividad-texto {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Tooltip personalizado para actividades */
+    .actividad-item[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0.5rem 0.75rem;
+        background-color: rgba(0, 0, 0, 0.9);
+        color: white;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.7rem;
+        white-space: nowrap;
+        z-index: 1000;
+        margin-bottom: 0.25rem;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .actividad-item[title]:hover::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% - 0.25rem);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        pointer-events: none;
+    }
+
+    .calendario-anual {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .mes-anual {
+        background-color: var(--color-bg-secondary);
+        border-radius: var(--border-radius-md);
+        padding: 1rem;
+    }
+
+    .mes-titulo {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+
+    .mes-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.25rem;
+    }
+
+    .dia-anual {
+        aspect-ratio: 1;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-sm);
+        padding: 0.25rem;
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--color-bg-primary);
+        transition: all var(--transition-fast);
+        font-size: 0.75rem;
+    }
+
+    .dia-anual:hover:not(.dia-otro-mes) {
+        background-color: var(--color-bg-secondary);
+        border-color: var(--color-primary);
+    }
+
+    .dia-anual.dia-otro-mes {
+        opacity: 0.3;
+        background-color: var(--color-gray-100, #f5f5f5);
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .dia-anual.dia-otro-mes .dia-numero {
+        color: var(--color-text-secondary, #999);
+    }
+
+    .dia-anual .indicador-actividades {
+        position: absolute;
+        bottom: 0.1rem;
+        right: 0.1rem;
+        font-size: 0.4rem;
+    }
+
+    .calendario-dia {
+        aspect-ratio: 1;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-md);
+        padding: 0.25rem;
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        background-color: var(--color-bg-primary);
+        transition: all var(--transition-fast);
+        overflow: hidden;
+    }
+
+    .calendario-dia:hover {
+        background-color: var(--color-bg-secondary);
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+    }
+
+    .calendario-dia.dia-otro-mes {
+        opacity: 0.4;
+        background-color: var(--color-gray-100);
+    }
+
+    .calendario-dia.dia-hoy {
+        background-color: var(--color-primary-light);
+        border-color: var(--color-primary);
+        font-weight: 600;
+    }
+
+    .calendario-dia.dia-festivo {
+        background-color: var(--color-warning-light);
+    }
+
+    .calendario-dia.dia-con-actividades {
+        border-color: var(--color-success);
+    }
+
+    .dia-numero {
+        font-size: 0.9rem;
+        color: var(--color-text-primary);
+        margin-bottom: 0.25rem;
+        align-self: flex-start;
+    }
+
+    .actividades-lista-mensual {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        width: 100%;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .actividad-mas {
+        background-color: var(--color-text-secondary) !important;
+        opacity: 0.8;
+    }
+
+    .indicador-actividades {
+        position: absolute;
+        bottom: 0.25rem;
+        right: 0.25rem;
+        color: var(--color-success);
+        font-size: 0.6rem;
+    }
+
+    @@media (max-width: 1200px) {
+        .calendario-anual {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .calendario-container {
+            padding: 0.75rem;
+        }
+
+        .calendario-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+        }
+
+        .calendario-header-left {
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .calendario-vistas {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-vista span {
+            display: none;
+        }
+
+        .calendario-title h2 {
+            font-size: 1.2rem;
+        }
+
+        .calendario-dia {
+            padding: 0.2rem;
+            min-height: 60px;
+        }
+
+        .dia-numero {
+            font-size: 0.75rem;
+        }
+
+        .actividades-lista-mensual {
+            gap: 0.1rem;
+        }
+
+        .actividad-item {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.3rem;
+        }
+
+        .calendario-anual {
+            grid-template-columns: 1fr;
+        }
+
+        .calendario-dia-semana {
+            min-height: 120px;
+        }
+
+        .actividades-lista {
+            gap: 0.15rem;
+        }
+
+        .calendario-grid {
+            gap: 0.25rem;
+        }
+
+        .calendario-dias-semana {
+            gap: 0.25rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .calendario-container {
+            padding: 0.5rem;
+        }
+
+        .calendario-title h2 {
+            font-size: 1rem;
+        }
+
+        .calendario-dia {
+            min-height: 50px;
+            padding: 0.15rem;
+        }
+
+        .dia-numero {
+            font-size: 0.7rem;
+        }
+
+        .actividad-item {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.25rem;
+        }
+
+        .calendario-dia-semana {
+            min-height: 100px;
+        }
+
+        .btn-nav {
+            padding: 0.4rem;
+        }
+
+        .btn-vista {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public int IdAsignacionAcademica { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDiaSeleccionado { get; set; }
+    [Parameter] public EventCallback OnActividadGuardada { get; set; }
+    [Parameter] public EventCallback<ActividadCalendario> OnActividadSeleccionada { get; set; }
+
+    private enum VistaCalendario
+    {
+        Semana,
+        Mes,
+        Año
+    }
+
+    private VistaCalendario vistaActual = VistaCalendario.Mes;
+    private DateTime fechaActual = DateTime.Now;
+    private DateTime mesActual => fechaActual;
+    private DateTime semanaActual => ObtenerInicioSemana(fechaActual);
+    private DateTime añoActual => new DateTime(fechaActual.Year, 1, 1);
+    
+    private List<DiaCalendario> diasCalendario = new();
+    private List<DiaSemana> diasSemana = new();
+    private List<MesAnual> mesesAnio = new();
+    private List<ActividadCalendario> actividadesMes = new();
+    private List<ActividadCalendario> actividadesAño = new();
+    private List<DateTime> diasFestivos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCalendario();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IdAsignacionAcademica > 0)
+        {
+            await CargarCalendario();
+        }
+    }
+
+    private DateTime ObtenerInicioSemana(DateTime fecha)
+    {
+        var diferencia = (int)fecha.DayOfWeek;
+        diferencia = diferencia == 0 ? 6 : diferencia - 1; // Lunes = 0
+        return fecha.AddDays(-diferencia).Date;
+    }
+
+    private string ObtenerTituloVista()
+    {
+        return vistaActual switch
+        {
+            VistaCalendario.Semana => $"{semanaActual:dd MMM} - {semanaActual.AddDays(6):dd MMM yyyy}",
+            VistaCalendario.Mes => mesActual.ToString("MMMM yyyy", new CultureInfo("es-ES")),
+            VistaCalendario.Año => añoActual.Year.ToString(),
+            _ => mesActual.ToString("MMMM yyyy", new CultureInfo("es-ES"))
+        };
+    }
+
+    private string ObtenerTituloBotonAnterior()
+    {
+        return vistaActual switch
+        {
+            VistaCalendario.Semana => "Semana anterior",
+            VistaCalendario.Mes => "Mes anterior",
+            VistaCalendario.Año => "Año anterior",
+            _ => "Anterior"
+        };
+    }
+
+    private string ObtenerTituloBotonSiguiente()
+    {
+        return vistaActual switch
+        {
+            VistaCalendario.Semana => "Semana siguiente",
+            VistaCalendario.Mes => "Mes siguiente",
+            VistaCalendario.Año => "Año siguiente",
+            _ => "Siguiente"
+        };
+    }
+
+    private async Task CambiarVista(VistaCalendario nuevaVista)
+    {
+        vistaActual = nuevaVista;
+        await CargarCalendario();
+    }
+
+    private async Task CargarCalendario()
+    {
+        diasCalendario.Clear();
+        diasSemana.Clear();
+        mesesAnio.Clear();
+        
+        // Obtener días festivos
+        var año = vistaActual == VistaCalendario.Año ? añoActual.Year : fechaActual.Year;
+        diasFestivos = await CalendarioService.ObtenerDiasFestivos(año);
+
+        if (vistaActual == VistaCalendario.Semana)
+        {
+            await CargarVistaSemanal();
+        }
+        else if (vistaActual == VistaCalendario.Mes)
+        {
+            await CargarVistaMensual();
+        }
+        else if (vistaActual == VistaCalendario.Año)
+        {
+            await CargarVistaAnual();
+        }
+    }
+
+    private async Task CargarVistaSemanal()
+    {
+        if (IdAsignacionAcademica > 0)
+        {
+            // Obtener actividades de la semana
+            var inicioSemana = semanaActual;
+            var finSemana = inicioSemana.AddDays(6);
+            
+            actividadesMes = await CalendarioService.ObtenerActividadesPorMes(
+                IdAsignacionAcademica, 
+                inicioSemana.Year, 
+                inicioSemana.Month
+            );
+            
+            // También obtener del mes siguiente si la semana cruza meses
+            if (finSemana.Month != inicioSemana.Month)
+            {
+                var actividadesMesSiguiente = await CalendarioService.ObtenerActividadesPorMes(
+                    IdAsignacionAcademica, 
+                    finSemana.Year, 
+                    finSemana.Month
+                );
+                actividadesMes.AddRange(actividadesMesSiguiente);
+            }
+        }
+
+        for (int i = 0; i < 7; i++)
+        {
+            var fecha = semanaActual.AddDays(i);
+            var actividadesDia = actividadesMes.Where(a => 
+                fecha.Date >= a.FechaInicio.Date && 
+                (a.FechaFinal == null || fecha.Date <= a.FechaFinal.Value.Date)
+            ).ToList();
+
+            diasSemana.Add(new DiaSemana
+            {
+                Fecha = fecha,
+                EsHoy = fecha.Date == DateTime.Today,
+                EsFestivo = diasFestivos.Contains(fecha.Date),
+                TieneActividades = actividadesDia.Count > 0,
+                Actividades = actividadesDia
+            });
+        }
+    }
+
+    private async Task CargarVistaMensual()
+    {
+        // Obtener actividades del mes
+        if (IdAsignacionAcademica > 0)
+        {
+            actividadesMes = await CalendarioService.ObtenerActividadesPorMes(
+                IdAsignacionAcademica, 
+                mesActual.Year, 
+                mesActual.Month
+            );
+        }
+
+        // Calcular primer día del mes y día de la semana
+        var primerDia = new DateTime(mesActual.Year, mesActual.Month, 1);
+        var diaSemanaInicio = (int)primerDia.DayOfWeek;
+        // Ajustar para que lunes sea 0
+        diaSemanaInicio = diaSemanaInicio == 0 ? 6 : diaSemanaInicio - 1;
+
+        // Días del mes anterior
+        var mesAnterior = mesActual.AddMonths(-1);
+        var ultimoDiaMesAnterior = new DateTime(mesAnterior.Year, mesAnterior.Month, 
+            DateTime.DaysInMonth(mesAnterior.Year, mesAnterior.Month));
+        
+        for (int i = diaSemanaInicio - 1; i >= 0; i--)
+        {
+            var fecha = ultimoDiaMesAnterior.AddDays(-i);
+            diasCalendario.Add(CrearDiaCalendario(fecha, false));
+        }
+
+        // Días del mes actual
+        var diasEnMes = DateTime.DaysInMonth(mesActual.Year, mesActual.Month);
+        for (int dia = 1; dia <= diasEnMes; dia++)
+        {
+            var fecha = new DateTime(mesActual.Year, mesActual.Month, dia);
+            diasCalendario.Add(CrearDiaCalendario(fecha, true));
+        }
+
+        // Días del mes siguiente para completar la grilla
+        var diasRestantes = 42 - diasCalendario.Count; // 6 semanas x 7 días
+        var primerDiaMesSiguiente = new DateTime(mesActual.Year, mesActual.Month, 1).AddMonths(1);
+        for (int dia = 1; dia <= diasRestantes; dia++)
+        {
+            var fecha = primerDiaMesSiguiente.AddDays(dia - 1);
+            diasCalendario.Add(CrearDiaCalendario(fecha, false));
+        }
+    }
+
+    private async Task CargarVistaAnual()
+    {
+        if (IdAsignacionAcademica > 0)
+        {
+            // Obtener actividades de todo el año
+            actividadesAño = new List<ActividadCalendario>();
+            for (int mes = 1; mes <= 12; mes++)
+            {
+                var actividades = await CalendarioService.ObtenerActividadesPorMes(
+                    IdAsignacionAcademica, 
+                    añoActual.Year, 
+                    mes
+                );
+                actividadesAño.AddRange(actividades);
+            }
+        }
+
+        var nombresMeses = new CultureInfo("es-ES").DateTimeFormat.MonthNames;
+        
+        for (int mes = 1; mes <= 12; mes++)
+        {
+            var primerDia = new DateTime(añoActual.Year, mes, 1);
+            var diaSemanaInicio = (int)primerDia.DayOfWeek;
+            diaSemanaInicio = diaSemanaInicio == 0 ? 6 : diaSemanaInicio - 1;
+            
+            var diasMes = new List<DiaCalendario>();
+            
+            // Días del mes anterior
+            if (diaSemanaInicio > 0)
+            {
+                var mesAnterior = mes == 1 ? 12 : mes - 1;
+                var añoAnterior = mes == 1 ? añoActual.Year - 1 : añoActual.Year;
+                var ultimoDiaMesAnterior = new DateTime(añoAnterior, mesAnterior, 
+                    DateTime.DaysInMonth(añoAnterior, mesAnterior));
+                
+                for (int i = diaSemanaInicio - 1; i >= 0; i--)
+                {
+                    var fecha = ultimoDiaMesAnterior.AddDays(-i);
+                    diasMes.Add(CrearDiaCalendarioAnual(fecha, false));
+                }
+            }
+
+            // Días del mes actual
+            var diasEnMes = DateTime.DaysInMonth(añoActual.Year, mes);
+            for (int dia = 1; dia <= diasEnMes; dia++)
+            {
+                var fecha = new DateTime(añoActual.Year, mes, dia);
+                diasMes.Add(CrearDiaCalendarioAnual(fecha, true));
+            }
+
+            // Días del mes siguiente para completar
+            var diasRestantes = 42 - diasMes.Count;
+            if (diasRestantes > 0)
+            {
+                var mesSiguiente = mes == 12 ? 1 : mes + 1;
+                var añoSiguiente = mes == 12 ? añoActual.Year + 1 : añoActual.Year;
+                for (int dia = 1; dia <= diasRestantes; dia++)
+                {
+                    var fecha = new DateTime(añoSiguiente, mesSiguiente, dia);
+                    diasMes.Add(CrearDiaCalendarioAnual(fecha, false));
+                }
+            }
+
+            mesesAnio.Add(new MesAnual
+            {
+                Numero = mes,
+                Nombre = nombresMeses[mes - 1],
+                Dias = diasMes
+            });
+        }
+    }
+
+    private DiaCalendario CrearDiaCalendario(DateTime fecha, bool esDelMesActual)
+    {
+        var esHoy = fecha.Date == DateTime.Today;
+        var esFestivo = diasFestivos.Contains(fecha.Date);
+        var actividadesDia = actividadesMes.Where(a => 
+            fecha.Date >= a.FechaInicio.Date && 
+            (a.FechaFinal == null || fecha.Date <= a.FechaFinal.Value.Date)
+        ).ToList();
+
+        return new DiaCalendario
+        {
+            Fecha = fecha,
+            EsDelMesActual = esDelMesActual,
+            EsHoy = esHoy,
+            EsFestivo = esFestivo,
+            TieneActividades = actividadesDia.Count > 0,
+            CantidadActividades = actividadesDia.Count,
+            Actividades = actividadesDia
+        };
+    }
+
+    private DiaCalendario CrearDiaCalendarioAnual(DateTime fecha, bool esDelMes)
+    {
+        var esHoy = fecha.Date == DateTime.Today;
+        var esFestivo = diasFestivos.Contains(fecha.Date);
+        var actividadesDia = actividadesAño.Where(a => 
+            fecha.Date >= a.FechaInicio.Date && 
+            (a.FechaFinal == null || fecha.Date <= a.FechaFinal.Value.Date)
+        ).ToList();
+
+        return new DiaCalendario
+        {
+            Fecha = fecha,
+            EsDelMesActual = esDelMes,
+            EsHoy = esHoy,
+            EsFestivo = esFestivo,
+            TieneActividades = actividadesDia.Count > 0,
+            CantidadActividades = actividadesDia.Count
+        };
+    }
+
+    private async Task PeriodoAnterior()
+    {
+        fechaActual = vistaActual switch
+        {
+            VistaCalendario.Semana => fechaActual.AddDays(-7),
+            VistaCalendario.Mes => fechaActual.AddMonths(-1),
+            VistaCalendario.Año => fechaActual.AddYears(-1),
+            _ => fechaActual.AddMonths(-1)
+        };
+        await CargarCalendario();
+    }
+
+    private async Task PeriodoSiguiente()
+    {
+        fechaActual = vistaActual switch
+        {
+            VistaCalendario.Semana => fechaActual.AddDays(7),
+            VistaCalendario.Mes => fechaActual.AddMonths(1),
+            VistaCalendario.Año => fechaActual.AddYears(1),
+            _ => fechaActual.AddMonths(1)
+        };
+        await CargarCalendario();
+    }
+
+    private async Task OnDiaClick(DateTime fecha)
+    {
+        if (OnDiaSeleccionado.HasDelegate)
+        {
+            await OnDiaSeleccionado.InvokeAsync(fecha);
+        }
+    }
+
+    /// <summary>
+    /// Método público para recargar el calendario después de crear/editar una actividad
+    /// </summary>
+    public async Task RecargarCalendario()
+    {
+        await CargarCalendario();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Maneja el clic en una actividad para editarla
+    /// </summary>
+    private async Task OnActividadClick(ActividadCalendario actividad)
+    {
+        if (OnActividadSeleccionada.HasDelegate)
+        {
+            await OnActividadSeleccionada.InvokeAsync(actividad);
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el color CSS según el tipo de actividad
+    /// --color-pastel-ocean: Video de enganche (1), Tareas (4), Trabajos (5), Talleres (6), Investigación (7), Proyecto (8), Actividad Práctica (9)
+    /// --color-pastel-rose: Preguntas problematizadoras (2), Presentaciones (11), Documentos (12), Recurso de Lectura (13), Resumen de Clase (16), Clase Virtual (14)
+    /// </summary>
+    private string ObtenerColorActividad(int idTipoActividad)
+    {
+        return idTipoActividad switch
+        {
+            1 or 4 or 5 or 6 or 7 or 8 or 9 => "var(--color-pastel-ocean)", // Video de enganche, Tareas, Trabajos, Talleres, Investigación, Proyecto, Actividad Práctica
+            2 or 11 or 12 or 13 or 16 or 14 => "var(--color-pastel-rose)", // Preguntas problematizadoras, Presentaciones, Documentos, Recurso de Lectura, Resumen de Clase, Clase Virtual
+            _ => "var(--color-primary)" // Color por defecto
+        };
+    }
+
+    /// <summary>
+    /// Obtiene la clase CSS según el tipo de actividad
+    /// </summary>
+    private string ObtenerClaseColor(int idTipoActividad)
+    {
+        return idTipoActividad switch
+        {
+            1 or 4 or 5 or 6 or 7 or 8 or 9 => "actividad-ocean",
+            2 or 11 or 12 or 13 or 16 or 14 => "actividad-rose",
+            _ => "actividad-default"
+        };
+    }
+
+    /// <summary>
+    /// Trunca el texto a 3 letras por palabra
+    /// Ejemplo: "Taller de Práctica" -> "Tal de Pra"
+    /// </summary>
+    private string TruncarTexto(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
+            return string.Empty;
+
+        var palabras = texto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var palabrasTruncadas = palabras.Select(p => p.Length > 3 ? p.Substring(0, 3) : p);
+        return string.Join(" ", palabrasTruncadas);
+    }
+
+    private class DiaCalendario
+    {
+        public DateTime Fecha { get; set; }
+        public bool EsDelMesActual { get; set; }
+        public bool EsHoy { get; set; }
+        public bool EsFestivo { get; set; }
+        public bool TieneActividades { get; set; }
+        public int CantidadActividades { get; set; }
+        public List<ActividadCalendario> Actividades { get; set; } = new();
+    }
+
+    private class DiaSemana
+    {
+        public DateTime Fecha { get; set; }
+        public bool EsHoy { get; set; }
+        public bool EsFestivo { get; set; }
+        public bool TieneActividades { get; set; }
+        public List<ActividadCalendario> Actividades { get; set; } = new();
+    }
+
+    private class MesAnual
+    {
+        public int Numero { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public List<DiaCalendario> Dias { get; set; } = new();
+    }
+}

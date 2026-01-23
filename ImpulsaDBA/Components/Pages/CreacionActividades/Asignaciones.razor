@@ -1,0 +1,410 @@
+@using ImpulsaDBA.Models
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Hosting
+@inject CalendarioService CalendarioService
+@inject IWebHostEnvironment WebHostEnvironment
+
+@if (Mostrar)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-container modal-large" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(esModoEdicion ? "Editar" : "Crear") @Title</h3>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <EditForm Model="actividad" OnValidSubmit="GuardarActividad">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault"
+                               @bind="actividad.ActividadActiva">
+                        <label class="form-check-label" for="flexSwitchCheckDefault">
+                            @(actividad.ActividadActiva ? "Visible a los estudiantes" : "No visible a los estudiantes")
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fecha-actividad" class="form-label">Fecha Publicación</label>
+                        <input type="datetime-local" id="fecha-entrega" class="form-control"
+                               @bind="actividad.FechaPublicacion" 
+                               min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-ddTHH:mm")" />
+                        <ValidationMessage For="@(() => actividad.FechaPublicacion)" />
+                        @if (!esModoEdicion && actividad.FechaPublicacion.HasValue && actividad.FechaPublicacion.Value.Date <= DateTime.Today)
+                        {
+                            <small class="text-danger">Solo se pueden crear actividades para días futuros (a partir de mañana).</small>
+                        }
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="titulo-actividad">Título</label>
+                        <input type="text" class="form-control" id="titulo-actividad"
+                               @bind="actividad.Titulo" />
+                        <ValidationMessage For="@(() => actividad.Titulo)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="descripcion-actividad">Descripción</label>
+                        <textarea class="form-control" id="descripcion-actividad" rows="3"
+                                  @bind="actividad.Descripcion"></textarea>
+                        <ValidationMessage For="@(() => actividad.Descripcion)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Editor de Texto</label>
+                        <textarea class="form-control" rows="5" placeholder="Escribe el contenido aquí..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <InputFile id="SubirArchivos" OnChange="HandleSelectedFiles" Multiple style="display: none;" 
+                                   accept=".pdf,audio/*,video/*" />
+                        <button type="button" onclick="document.getElementById('SubirArchivos').click()" 
+                                class="btn btn-primary">
+                            <i class="bi bi-arrow-bar-up"></i> Subir archivo
+                        </button>
+                    </div>
+
+                    <ul class="list-group mb-3">
+                        @foreach (var archivo in ListArchivos)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@archivo.Nombre</span> - <span>@archivo.Tipo</span>
+                                <button type="button" class="btn btn-danger btn-sm" 
+                                        @onclick="() => EliminarArchivo(archivo)">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </li>
+                        }
+                    </ul>
+
+                    @if (!string.IsNullOrEmpty(MensajeProcesos))
+                    {
+                        <div class="alert alert-info">
+                            @MensajeProcesos
+                        </div>
+                    }
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Actividad</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-container {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    .modal-large {
+        max-width: 800px;
+    }
+
+    @@keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .btn-cerrar {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-fast);
+    }
+
+    .btn-cerrar:hover {
+        color: var(--color-text-primary);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1.5rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--border-radius-md);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: var(--color-primary-dark);
+    }
+
+    .btn-secondary {
+        background-color: var(--color-secondary);
+        color: var(--color-text-white);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-secondary-dark);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-sm);
+        font-size: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .alert-info {
+        background-color: var(--color-info-light);
+        color: var(--color-info-dark);
+    }
+</style>
+
+@code {
+    [Parameter] public bool Mostrar { get; set; }
+    [Parameter] public DateTime FechaSeleccionada { get; set; }
+    [Parameter] public int IdAsignacionAcademica { get; set; }
+    [Parameter] public int TipoActividadId { get; set; }
+    [Parameter] public ActividadCalendario? ActividadEditar { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback OnActividadGuardada { get; set; }
+
+    private FormActividadDto actividad = new();
+    private List<ArchivoCargado> ListArchivos = new();
+    private string MensajeProcesos = "";
+    private string Title = "";
+    private bool esModoEdicion => ActividadEditar != null;
+
+    protected override void OnParametersSet()
+    {
+        if (Mostrar)
+        {
+            if (ActividadEditar != null)
+            {
+                actividad = new FormActividadDto
+                {
+                    FechaPublicacion = ActividadEditar.FechaInicio,
+                    ActividadActiva = !ActividadEditar.Eliminado
+                };
+            }
+            else
+            {
+                actividad = new FormActividadDto
+                {
+                    FechaPublicacion = FechaSeleccionada,
+                    ActividadActiva = true
+                };
+            }
+            ListArchivos = new();
+            MensajeProcesos = "";
+            
+            Title = TipoActividadId switch
+            {
+                4 => "Tarea",
+                5 => "Trabajo",
+                6 => "Taller",
+                7 => "Investigación",
+                8 => "Proyecto",
+                9 => "Actividad Práctica",
+                _ => "Asignación"
+            };
+        }
+    }
+
+    private async Task HandleSelectedFiles(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            try
+            {
+                if (file.Size > 5 * 1024 * 1024)
+                {
+                    MensajeProcesos = $"El archivo {file.Name} excede el tamaño máximo permitido (5MB).";
+                    continue;
+                }
+
+                var contentType = file.ContentType;
+                if (contentType != "application/pdf" &&
+                    contentType != "application/msword" &&
+                    contentType != "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+                    contentType != "application/vnd.ms-powerpoint" &&
+                    contentType != "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+                {
+                    MensajeProcesos = $"El archivo {file.Name} no tiene un formato válido.";
+                    continue;
+                }
+
+                const int bufferSize = 81920;
+                using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                using var memoryStream = new MemoryStream();
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, bufferSize)) > 0)
+                {
+                    memoryStream.Write(buffer, 0, bytesRead);
+                }
+
+                byte[] fileData = memoryStream.ToArray();
+                string ruta = GetFileRoute(contentType, file.Name);
+                string rutaArchivo = Path.Combine(WebHostEnvironment.WebRootPath, ruta);
+                string? directorio = Path.GetDirectoryName(rutaArchivo);
+                
+                if (!Directory.Exists(directorio))
+                {
+                    Directory.CreateDirectory(directorio!);
+                }
+
+                await File.WriteAllBytesAsync(rutaArchivo, fileData);
+
+                ListArchivos.Add(new ArchivoCargado
+                {
+                    Nombre = file.Name,
+                    Tipo = GetFileType(contentType),
+                    Ruta = ruta
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al procesar el archivo {file.Name}: {ex.Message}");
+            }
+        }
+    }
+
+    private string GetFileRoute(string contentType, string fileName)
+    {
+        string rutaBase = contentType switch
+        {
+            "application/pdf" => Path.Combine("Archivos", "PDFs"),
+            _ when contentType.StartsWith("audio/") => Path.Combine("Archivos", "Audios"),
+            _ when contentType.StartsWith("video/") => Path.Combine("Archivos", "Videos"),
+            _ => "Archivos"
+        };
+        return Path.Combine(rutaBase, fileName);
+    }
+
+    private int GetFileType(string contentType)
+    {
+        if (contentType == "application/pdf") return 1;
+        if (contentType.StartsWith("video/")) return 2;
+        if (contentType.StartsWith("audio/")) return 3;
+        return 4;
+    }
+
+    private void EliminarArchivo(ArchivoCargado archivo)
+    {
+        ListArchivos.Remove(archivo);
+    }
+
+    private async Task GuardarActividad()
+    {
+        // TODO: Implementar guardado en BD
+        MensajeProcesos = "Actividad guardada correctamente";
+        await Task.Delay(1000);
+        
+        if (OnActividadGuardada.HasDelegate)
+        {
+            await OnActividadGuardada.InvokeAsync();
+        }
+        
+        await CerrarModal();
+    }
+
+    private async Task CerrarModal()
+    {
+        if (OnCerrar.HasDelegate)
+        {
+            await OnCerrar.InvokeAsync();
+        }
+    }
+
+    private class ArchivoCargado
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public int Tipo { get; set; }
+        public string Ruta { get; set; } = string.Empty;
+    }
+}
