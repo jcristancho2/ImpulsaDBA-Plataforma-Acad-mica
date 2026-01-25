@@ -7,6 +7,7 @@
 @using ImpulsaDBA.Client.Auth
 @using Microsoft.AspNetCore.Components.Authorization
 @using ImpulsaDBA.Client.Components.Layout
+@using ImpulsaDBA.Client.Components.Shared
 @using Microsoft.AspNetCore.Components.Web
 @inject AuthService AuthService
 @inject CustomAuthStateProvider AuthStateProvider
@@ -55,7 +56,7 @@
                     <input type="checkbox" id="remember" @bind="recordarme" />
                     <label for="remember">Recordarme</label>
                 </div>
-                <a href="#" class="login-forgot" @onclick:preventDefault>¿Olvidó su contraseña?</a>
+                <a href="#" class="login-forgot" @onclick="AbrirModalOlvideContrasena" @onclick:preventDefault>¿Olvidó su contraseña?</a>
             </div>
 
             <button type="submit" 
@@ -81,11 +82,15 @@
     </div>
 </div>
 
+<!-- Modal Olvidé Contraseña -->
+<ModalOlvideContrasena Mostrar="@mostrarModalOlvideContrasena" OnCerrar="CerrarModalOlvideContrasena" />
+
 @code {
     private LoginFormModel loginModel = new LoginFormModel();
     private string? mensajeError;
     private bool isLoading = false;
     private bool recordarme = false;
+    private bool mostrarModalOlvideContrasena = false;
 
     /// <summary>
     /// Modelo para el formulario de login.
@@ -157,5 +162,15 @@
         {
             isLoading = false;
         }
+    }
+
+    private void AbrirModalOlvideContrasena()
+    {
+        mostrarModalOlvideContrasena = true;
+    }
+
+    private void CerrarModalOlvideContrasena()
+    {
+        mostrarModalOlvideContrasena = false;
     }
 }

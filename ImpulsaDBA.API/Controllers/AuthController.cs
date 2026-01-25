@@ -85,6 +85,61 @@ namespace ImpulsaDBA.API.Controllers
                 });
             }
         }
+
+        [HttpPost("validar-informacion-recuperacion")]
+        public async Task<IActionResult> ValidarInformacionRecuperacion([FromBody] ValidarInformacionRecuperacionRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest(new { error = "El request no puede ser nulo" });
+
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var esValido = await _authService.ValidarInformacionRecuperacion(request);
+                
+                return Ok(new { esValido, mensaje = esValido ? "Información validada correctamente" : "La información proporcionada no coincide con ningún usuario" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Error al validar información", mensaje = ex.Message });
+            }
+        }
+
+        [HttpPost("cambiar-contrasena")]
+        public async Task<IActionResult> CambiarContrasena([FromBody] CambiarContrasenaRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return BadRequest(new { error = "El request no puede ser nulo" });
+
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // Validar que las contraseñas coincidan
+                if (request.NuevaContrasena != request.ConfirmarContrasena)
+                {
+                    return BadRequest(new { error = "Las contraseñas no coinciden" });
+                }
+
+                var resultado = await _authService.CambiarContrasena(request);
+                
+                if (resultado)
+                {
+                    return Ok(new { exito = true, mensaje = "Contraseña cambiada exitosamente" });
+                }
+                else
+                {
+                    return BadRequest(new { exito = false, mensaje = "No se pudo cambiar la contraseña. Verifique que la información proporcionada sea correcta." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Error al cambiar contraseña", mensaje = ex.Message });
+            }
+        }
     }
 
     // Request classes locales (pueden moverse a Shared si se reutilizan)

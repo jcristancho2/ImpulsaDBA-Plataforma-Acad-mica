@@ -118,5 +118,58 @@ namespace ImpulsaDBA.Client.Services
                 };
             }
         }
+
+        public async Task<bool> ValidarInformacionRecuperacion(ValidarInformacionRecuperacionRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/auth/validar-informacion-recuperacion", request);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    if (result.TryGetProperty("esValido", out var esValidoElement))
+                    {
+                        return esValidoElement.GetBoolean();
+                    }
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al validar información de recuperación: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> CambiarContrasena(CambiarContrasenaRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/auth/cambiar-contrasena", request);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    if (result.TryGetProperty("exito", out var exitoElement))
+                    {
+                        return exitoElement.GetBoolean();
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error al cambiar contraseña: {response.StatusCode} - {errorContent}");
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cambiar contraseña: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
