@@ -1,0 +1,762 @@
+@using ImpulsaDBA.Shared.DTOs
+@using ImpulsaDBA.Shared.Requests
+@using ImpulsaDBA.Client.Services
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject CalendarioService CalendarioService
+@inject AsignaturaService AsignaturaService
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (Mostrar)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(modoSoloLectura ? "Ver" : (esModoEdicion ? "Editar" : "Incluir")) Videos de Enganche</h3>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <EditForm Model="actividad" OnValidSubmit="GuardarActividad">
+                    <DataAnnotationsValidator />
+                    
+                    @if (modoSoloLectura && ActividadEditar?.FechaCreacion.HasValue == true)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-calendar-plus"></i> 
+                            <strong>Fecha de creación:</strong> @ActividadEditar.FechaCreacion.Value.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    }
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault"
+                               @bind="actividad.ActividadActiva" disabled="@modoSoloLectura">
+                        <label class="form-check-label" for="flexSwitchCheckDefault">
+                            @(actividad.ActividadActiva ? "Visible a los estudiantes" : "No visible a los estudiantes")
+                        </label>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="titulo-actividad">Título</label>
+                        <input type="text" class="form-control" id="titulo-actividad"
+                               @bind="actividad.Titulo" disabled="@modoSoloLectura" />
+                        <ValidationMessage For="@(() => actividad.Titulo)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fecha-actividad" class="form-label">Fecha Publicación</label>
+                        <input type="datetime-local" id="fecha-entrega" class="form-control"
+                               @bind="actividad.FechaPublicacion" 
+                               min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-ddTHH:mm")"
+                               disabled="@modoSoloLectura" />
+                        <ValidationMessage For="@(() => actividad.FechaPublicacion)" />
+                        @if (!esModoEdicion && !modoSoloLectura && actividad.FechaPublicacion.HasValue && actividad.FechaPublicacion.Value.Date <= DateTime.Today)
+                        {
+                            <small class="text-danger">Solo se pueden crear actividades para días futuros (a partir de mañana).</small>
+                        }
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="descripcion-actividad">Descripción</label>
+                        <textarea class="form-control" id="descripcion-actividad" rows="3"
+                                  @bind="actividad.Descripcion" disabled="@modoSoloLectura"></textarea>
+                        <ValidationMessage For="@(() => actividad.Descripcion)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Videos</label>
+                        <ul class="list-group" style="max-height: 40vh; overflow-y: auto;">
+                            @foreach (var video in ListVideos.OrderBy(v => v.Orden))
+                            {
+                                <li class="list-group-item video-item">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        @if (!string.IsNullOrEmpty(video.ThumbnailUrl))
+                                        {
+                                            <div class="video-thumbnail-container" 
+                                                 @onclick="@(() => AbrirVideo(video.Url))"
+                                                 title="Hacer clic para abrir el video">
+                                                <img src="@(video.ThumbnailFallback ?? video.ThumbnailUrl)" 
+                                                     alt="Miniatura del video" 
+                                                     class="video-thumbnail"
+                                                     @onerror="@(() => ManejarErrorThumbnail(video))" />
+                                                <div class="video-play-overlay">
+                                                    <i class="bi bi-play-circle-fill"></i>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="video-thumbnail-container video-thumbnail-placeholder">
+                                                <i class="bi bi-camera-video"></i>
+                                            </div>
+                                        }
+                                        <div class="flex-grow-1">
+                                            <input type="url" 
+                                                   class="form-control" 
+                                                   placeholder="Ingrese el URL del video (YouTube, Vimeo, etc.)"
+                                                   value="@video.Url"
+                                                   disabled="@modoSoloLectura"
+                                                   @onchange="@((ChangeEventArgs e) => ActualizarVideoUrl(video, e.Value?.ToString() ?? ""))" />
+                                            @if (!string.IsNullOrEmpty(video.ThumbnailUrl))
+                                            {
+                                                <small class="text-muted d-block mt-1">
+                                                    <i class="bi bi-check-circle text-success"></i> Video detectado
+                                                </small>
+                                            }
+                                        </div>
+                                        @if (!modoSoloLectura)
+                                        {
+                                            <button type="button" 
+                                                    class="btn btn-danger btn-sm"
+                                                    @onclick="() => EliminarVideo(video)"
+                                                    title="Eliminar video">
+                                                <i class="bi bi-x-square-fill"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                        @if (!modoSoloLectura)
+                        {
+                            <button type="button" class="btn btn-success mt-2"
+                                    @onclick="AgregarVideo">
+                                <i class="bi bi-plus-square-fill"></i> Agregar Video
+                            </button>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(MensajeProcesos))
+                    {
+                        <div class="alert alert-info">
+                            @MensajeProcesos
+                        </div>
+                    }
+
+                    <div class="modal-footer">
+                        @if (modoSoloLectura)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
+                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-danger" @onclick="CerrarModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Actividad</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-container {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @@keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .btn-cerrar {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-fast);
+    }
+
+    .btn-cerrar:hover {
+        color: var(--color-text-primary);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1.5rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--border-radius-md);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: var(--color-primary-dark);
+    }
+
+    .btn-secondary {
+        background-color: var(--color-secondary);
+        color: var(--color-text-white);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-secondary-dark);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-sm);
+        font-size: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .alert-info {
+        background-color: var(--color-info-light);
+        color: var(--color-info-dark);
+    }
+
+    .video-item {
+        padding: 1rem;
+    }
+
+    .video-thumbnail-container {
+        position: relative;
+        width: 120px;
+        height: 90px;
+        min-width: 120px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: var(--color-bg-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .video-thumbnail-container:hover {
+        transform: scale(1.05);
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .video-play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.3);
+        color: white;
+        font-size: 2rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .video-thumbnail-container:hover .video-play-overlay {
+        opacity: 1;
+    }
+
+    .video-thumbnail-container:active .video-play-overlay {
+        opacity: 0.8;
+    }
+
+    .video-thumbnail-placeholder {
+        background-color: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        font-size: 2rem;
+    }
+
+    .video-thumbnail-placeholder i {
+        opacity: 0.5;
+    }
+</style>
+
+@code {
+    [Parameter] public bool Mostrar { get; set; }
+    [Parameter] public DateTime FechaSeleccionada { get; set; }
+    [Parameter] public int IdAsignacionAcademica { get; set; }
+    [Parameter] public ActividadCalendarioDto? ActividadEditar { get; set; }
+    [Parameter] public bool ModoSoloLectura { get; set; } = false;
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback OnActividadGuardada { get; set; }
+
+    private CrearActividadRequest actividad = new();
+    private List<VideoEnganche> ListVideos = new();
+    private int NextId = 1;
+    private string MensajeProcesos = "";
+    private bool esModoEdicion => ActividadEditar != null;
+    private bool modoSoloLectura = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Mostrar)
+        {
+            modoSoloLectura = ModoSoloLectura;
+            
+            if (ActividadEditar != null)
+            {
+                // Modo edición: cargar datos completos de la actividad
+                try
+                {
+                    var actividadCompleta = await CalendarioService.ObtenerActividadCompleta(ActividadEditar.Id);
+                    
+                    actividad = new CrearActividadRequest
+                    {
+                        Titulo = actividadCompleta.Titulo ?? ActividadEditar.Titulo ?? "",
+                        Descripcion = actividadCompleta.Descripcion ?? "",
+                        FechaPublicacion = actividadCompleta.FechaPublicacion ?? ActividadEditar.FechaInicio,
+                        ActividadActiva = actividadCompleta.ActividadActiva
+                    };
+                    
+                    // Cargar videos
+                    if (actividadCompleta.Videos != null && actividadCompleta.Videos.Any())
+                    {
+                        ListVideos = actividadCompleta.Videos.Select((v, index) => new VideoEnganche
+                        {
+                            Id = index + 1,
+                            Url = v.Url,
+                            Orden = v.Orden
+                        }).ToList();
+                        NextId = ListVideos.Max(v => v.Id) + 1;
+                    }
+                    else
+                    {
+                        ListVideos = new();
+                        NextId = 1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al cargar actividad completa: {ex.Message}");
+                    // Fallback a datos básicos
+                    actividad = new CrearActividadRequest
+                    {
+                        Titulo = ActividadEditar.Titulo ?? "",
+                        FechaPublicacion = ActividadEditar.FechaInicio,
+                        ActividadActiva = !ActividadEditar.Eliminado
+                    };
+                    ListVideos = new();
+                    NextId = 1;
+                }
+            }
+            else
+            {
+                // Modo creación: valores por defecto
+                actividad = new CrearActividadRequest
+                {
+                    FechaPublicacion = FechaSeleccionada,
+                    ActividadActiva = true
+                };
+                ListVideos = new();
+                NextId = 1;
+            }
+            MensajeProcesos = "";
+        }
+    }
+
+    private void HabilitarEdicion()
+    {
+        modoSoloLectura = false;
+        StateHasChanged();
+    }
+
+    private void AgregarVideo()
+    {
+        ListVideos.Add(new VideoEnganche
+        {
+            Id = NextId,
+            Url = "",
+            Orden = ListVideos.Count + 1,
+        });
+        NextId++;
+    }
+
+    private void EliminarVideo(VideoEnganche video)
+    {
+        ListVideos.Remove(video);
+    }
+
+    private void ActualizarVideoUrl(VideoEnganche video, string nuevaUrl)
+    {
+        video.Url = nuevaUrl;
+        video.ThumbnailUrl = ObtenerThumbnailUrl(nuevaUrl);
+        video.ThumbnailFallback = null; // Resetear fallback
+        StateHasChanged();
+    }
+
+    private void ManejarErrorThumbnail(VideoEnganche video)
+    {
+        // Si falla maxresdefault, intentar con hqdefault para YouTube
+        if (!string.IsNullOrEmpty(video.ThumbnailUrl) && 
+            video.ThumbnailUrl.Contains("maxresdefault") && 
+            string.IsNullOrEmpty(video.ThumbnailFallback))
+        {
+            video.ThumbnailFallback = video.ThumbnailUrl.Replace("maxresdefault", "hqdefault");
+            video.ThumbnailUrl = video.ThumbnailFallback;
+            StateHasChanged();
+        }
+    }
+
+    private string? ObtenerThumbnailUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        try
+        {
+            // YouTube
+            var youtubeId = ExtraerIdYouTube(url);
+            if (!string.IsNullOrEmpty(youtubeId))
+            {
+                // Intentar con maxresdefault primero, si falla usar hqdefault
+                return $"https://img.youtube.com/vi/{youtubeId}/maxresdefault.jpg";
+            }
+
+            // Vimeo
+            var vimeoId = ExtraerIdVimeo(url);
+            if (!string.IsNullOrEmpty(vimeoId))
+            {
+                // Vimeo requiere una llamada a su API o usar un servicio proxy
+                // Por ahora, usamos un servicio público que genera thumbnails de Vimeo
+                return $"https://vumbnail.com/{vimeoId}.jpg";
+            }
+
+            // Para otros servicios, podríamos intentar detectar si es un video
+            // Por ahora retornamos null
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string? ExtraerIdYouTube(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        try
+        {
+            var uri = new Uri(url);
+            
+            // Diferentes formatos de URLs de YouTube:
+            // https://www.youtube.com/watch?v=VIDEO_ID
+            // https://youtu.be/VIDEO_ID
+            // https://www.youtube.com/embed/VIDEO_ID
+            // https://www.youtube.com/v/VIDEO_ID
+
+            if (uri.Host.Contains("youtube.com"))
+            {
+                if (uri.AbsolutePath == "/watch")
+                {
+                    // Extraer el parámetro v= de la query string
+                    var query = uri.Query;
+                    if (query.StartsWith("?"))
+                        query = query.Substring(1);
+                    
+                    var parameters = query.Split('&');
+                    foreach (var param in parameters)
+                    {
+                        var parts = param.Split('=');
+                        if (parts.Length == 2 && parts[0] == "v")
+                        {
+                            return Uri.UnescapeDataString(parts[1]);
+                        }
+                    }
+                }
+                else if (uri.AbsolutePath.StartsWith("/embed/"))
+                {
+                    return uri.AbsolutePath.Replace("/embed/", "").Split('?')[0];
+                }
+                else if (uri.AbsolutePath.StartsWith("/v/"))
+                {
+                    return uri.AbsolutePath.Replace("/v/", "").Split('?')[0];
+                }
+            }
+            else if (uri.Host.Contains("youtu.be"))
+            {
+                return uri.AbsolutePath.TrimStart('/').Split('?')[0];
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string? ExtraerIdVimeo(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        try
+        {
+            var uri = new Uri(url);
+            
+            // Formatos de URLs de Vimeo:
+            // https://vimeo.com/VIDEO_ID
+            // https://vimeo.com/channels/CHANNEL/VIDEO_ID
+            // https://player.vimeo.com/video/VIDEO_ID
+
+            if (uri.Host.Contains("vimeo.com"))
+            {
+                var segments = uri.AbsolutePath.TrimStart('/').Split('/');
+                
+                // Si es /video/VIDEO_ID
+                if (segments.Length > 0 && segments[0] == "video")
+                {
+                    return segments.Length > 1 ? segments[1] : null;
+                }
+                
+                // Si es /VIDEO_ID directamente
+                if (segments.Length > 0 && !segments[0].Contains("channels") && !segments[0].Contains("groups"))
+                {
+                    // El último segmento suele ser el ID
+                    return segments[segments.Length - 1];
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task GuardarActividad()
+    {
+        try
+        {
+            // Validar que tenemos un IdAsignacionAcademica válido
+            if (IdAsignacionAcademica <= 0)
+            {
+                MensajeProcesos = "Error: No se ha seleccionado una asignación académica válida";
+                Console.WriteLine("❌ Error: IdAsignacionAcademica es inválido o cero");
+                return;
+            }
+
+            MensajeProcesos = esModoEdicion ? "Actualizando actividad..." : "Guardando actividad...";
+            Console.WriteLine($"💾 {(esModoEdicion ? "Actualizando" : "Guardando")} Video de Enganche - IdAsignacion: {IdAsignacionAcademica}");
+            
+            if (esModoEdicion && ActividadEditar != null)
+            {
+                // Obtener UsuarioId del usuario actual
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                var usuarioIdClaim = authState?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(usuarioIdClaim) || !int.TryParse(usuarioIdClaim, out int usuarioId))
+                {
+                    MensajeProcesos = "Error: No se pudo identificar al usuario actual";
+                    return;
+                }
+
+                // Modo actualización
+                var requestActualizar = new ActualizarActividadRequest
+                {
+                    Id = ActividadEditar.Id, // ID de tab.asignacion_academica_recurso
+                    ActividadActiva = actividad.ActividadActiva,
+                    FechaPublicacion = actividad.FechaPublicacion,
+                    Titulo = actividad.Titulo,
+                    Descripcion = actividad.Descripcion,
+                    Videos = ListVideos
+                        .Where(v => !string.IsNullOrEmpty(v.Url))
+                        .Select(v => new VideoEngancheRequest
+                        {
+                            Url = v.Url,
+                            Orden = v.Orden
+                        })
+                        .ToList(),
+                    UsuarioId = usuarioId
+                };
+                
+                Console.WriteLine($"📤 Actualizando actividad con ID: {requestActualizar.Id}, UsuarioId: {usuarioId}");
+                
+                try
+                {
+                    var resultado = await CalendarioService.ActualizarActividad(requestActualizar);
+                    
+                    Console.WriteLine($"✅ Video de Enganche actualizado exitosamente: {resultado}");
+                    MensajeProcesos = "Actividad actualizada correctamente";
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine($"❌ No autorizado: {ex.Message}");
+                    MensajeProcesos = $"No autorizado: {ex.Message}";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error al actualizar: {ex.Message}");
+                    MensajeProcesos = $"Error al actualizar: {ex.Message}";
+                }
+            }
+            else
+            {
+                // Modo creación
+                // Obtener información del periodo actual
+                var periodoInfo = await AsignaturaService.ObtenerPeriodoActual();
+                int anioId = int.Parse(periodoInfo.Anio);
+                int periodoId = int.Parse(periodoInfo.Periodo);
+                
+                // Construir el request
+                var request = new CrearActividadCompletaRequest
+                {
+                    ActividadActiva = actividad.ActividadActiva,
+                    FechaPublicacion = actividad.FechaPublicacion,
+                    Titulo = actividad.Titulo,
+                    Descripcion = actividad.Descripcion,
+                    TipoActividadId = 1, // Video de Enganche
+                    AsignacionAcademicaId = IdAsignacionAcademica,
+                    PeriodoId = periodoId,
+                    AnioId = anioId,
+                    Videos = ListVideos
+                        .Where(v => !string.IsNullOrEmpty(v.Url))
+                        .Select(v => new VideoEngancheRequest
+                        {
+                            Url = v.Url,
+                            Orden = v.Orden
+                        })
+                        .ToList()
+                };
+                
+                await CalendarioService.CrearActividad(request);
+                
+                MensajeProcesos = "Actividad guardada correctamente";
+            }
+            
+            await Task.Delay(1000);
+            
+            if (OnActividadGuardada.HasDelegate)
+            {
+                await OnActividadGuardada.InvokeAsync();
+            }
+            
+            await CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            MensajeProcesos = $"Error al guardar la actividad: {ex.Message}";
+            Console.WriteLine($"Error al guardar actividad: {ex.Message}");
+        }
+    }
+
+    private async Task CerrarModal()
+    {
+        if (OnCerrar.HasDelegate)
+        {
+            await OnCerrar.InvokeAsync();
+        }
+    }
+
+    private async Task AbrirVideo(string url)
+    {
+        if (!string.IsNullOrEmpty(url))
+        {
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+    }
+
+    private class VideoEnganche
+    {
+        public int Id { get; set; }
+        public string Url { get; set; } = string.Empty;
+        public int Orden { get; set; }
+        public string? ThumbnailUrl { get; set; }
+        public string? ThumbnailFallback { get; set; }
+    }
+}

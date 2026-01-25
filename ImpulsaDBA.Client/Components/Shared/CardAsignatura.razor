@@ -1,0 +1,264 @@
+@using ImpulsaDBA.Shared.DTOs
+
+<div class="asignatura-card" @onclick="OnCardClick">
+    <!-- Contenedor con color de la tarjeta para nombre, grupo y estudiantes -->
+    <div class="asignatura-info-container" style="background-color: @Asignatura.ColorHex;">
+        <div class="asignatura-header">
+            <h3>@Asignatura.Nombre</h3>
+        </div>
+        <div class="asignatura-body">
+            <span class="stat-item">
+                <i class="bi bi-collection-fill stat-icon"></i>
+                Grupo: @Asignatura.Grupo
+            </span>
+            <div class="asignatura-stats">
+                <span class="stat-item">
+                    <i class="bi bi-people-fill stat-icon"></i>
+                    @Asignatura.CantidadEstudiantes estudiantes
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenedor con blur para actividades -->
+    <div class="asignatura-activities">
+        <div class="activities-header">
+            <i class="bi bi-file-earmark-text-fill"></i>
+            <span class="activities-title">Actividades</span>
+        </div>
+        <div class="activities-grid">
+            <div class="activity-item">
+                <span class="activity-label">Totales</span>
+                <span class="activity-value">@(Asignatura.Estadisticas?.Totales ?? 0)</span>
+            </div>
+            <div class="activity-item">
+                <span class="activity-label">visibles</span>
+                <span class="activity-value activity-active">@(Asignatura.Estadisticas?.Activas ?? 0)</span>
+            </div>
+            <div class="activity-item">
+                <span class="activity-label">invisibles</span>
+                <span class="activity-value activity-inactive">@(Asignatura.Estadisticas?.Inactivas ?? 0)</span>
+            </div>
+            <div class="activity-item">
+                <span class="activity-label">Pendientes</span>
+                <span class="activity-value activity-pending">@(Asignatura.Estadisticas?.Pendientes ?? 0)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public AsignaturaDto Asignatura { get; set; } = default!;
+    [Parameter] public EventCallback<AsignaturaDto> OnClick { get; set; }
+    [Parameter] public EventCallback<AsignaturaDto> OnMenuClick { get; set; }
+
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Asignatura);
+        }
+    }
+
+    private async Task HandleMenuClick()
+    {
+        if (OnMenuClick.HasDelegate)
+        {
+            await OnMenuClick.InvokeAsync(Asignatura);
+        }
+    }
+}
+
+<style>
+    .asignatura-card {
+        background-color: var(--color-bg-secondary);
+        border-radius: var(--border-radius-xl);
+        padding: 0;
+        text-align: center;
+        color: var(--color-pastel-black);
+        box-shadow: 0 2px 8px var(--color-shadow);
+        transition: transform var(--transition-fast),
+                    box-shadow var(--transition-fast);
+        cursor: pointer;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .asignatura-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--color-shadow);
+    }
+
+    /* Contenedor con color de la tarjeta */
+    .asignatura-info-container {
+        padding: 1rem;
+        border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+        color: var(--color-text-primary);
+        text-align: center;
+    }
+
+    .asignatura-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .asignatura-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        width: 100%;
+        height: 2.5em;
+        display: flex;
+        align-items: center;      /* Centrado vertical */
+        justify-content: center;  /* Centrado horizontal */
+        text-align: center;
+    }
+
+    .asignatura-menu {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: inherit;
+        opacity: 0.7;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .asignatura-menu:hover {
+        opacity: 1;
+    }
+
+    .asignatura-body {
+        margin-bottom: 0;
+        display: flex;
+        align-items: start;      /* Centrado vertical */
+        justify-content: center;  /* Centrado horizontal */
+        text-align: center;
+        flex-direction: column;
+
+    }
+
+    .asignatura-level {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .asignatura-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .stat-icon {
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+
+    /* Contenedor de actividades con blur */
+    .asignatura-activities {
+        margin-top: 0;
+        padding: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 0 0 var(--border-radius-xl) var(--border-radius-xl);
+    }
+
+    .activities-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .activities-header i {
+        font-size: 1rem;
+    }
+
+    .activities-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .activity-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .activity-label {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        font-weight: 400;
+    }
+
+    .activity-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .activity-value.activity-active {
+        color: var(--color-text-primary);
+    }
+
+    .activity-value.activity-inactive {
+        color: var(--color-text-primary);
+    }
+
+    .activity-value.activity-pending {
+        color: var(--color-text-primary);
+    }
+
+    .asignatura-footer {
+        padding-top: 1rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: var(--color-white);
+        border-radius: var(--border-radius-md);
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--border-radius-round);
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge i {
+        font-size: 0.7rem;
+    }
+
+    .badge-warning {
+        background-color: var(--color-warning-light);
+        color: var(--color-warning-dark);
+    }
+
+    .badge-success {
+        background-color: var(--color-success-light);
+        color: var(--color-success-dark);
+    }
+</style>

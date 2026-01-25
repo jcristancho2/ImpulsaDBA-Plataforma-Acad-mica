@@ -1,0 +1,30 @@
+@namespace ImpulsaDBA.Client
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(ImpulsaDBA.Client.Components.Layout.DashboardLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <p role="alert">No tienes permiso para acceder a esta página.</p>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Página no encontrada</PageTitle>
+            <LayoutView Layout="@typeof(ImpulsaDBA.Client.Components.Layout.DashboardLayout)">
+                <h1>Página no encontrada</h1>
+                <p>Lo sentimos, no hay nada en esta dirección.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+

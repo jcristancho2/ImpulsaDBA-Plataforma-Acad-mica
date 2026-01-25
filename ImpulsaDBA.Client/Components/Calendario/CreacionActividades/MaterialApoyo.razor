@@ -1,0 +1,578 @@
+@using ImpulsaDBA.Shared.DTOs
+@using ImpulsaDBA.Shared.Requests
+@using ImpulsaDBA.Client.Services
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject CalendarioService CalendarioService
+@inject AsignaturaService AsignaturaService
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (Mostrar)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(modoSoloLectura ? "Ver" : (esModoEdicion ? "Editar" : "Asignar")) @TituloModal</h3>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <EditForm Model="actividad" OnValidSubmit="GuardarActividad">
+                    <DataAnnotationsValidator />
+                    
+                    @if (modoSoloLectura && ActividadEditar != null && ActividadEditar.FechaCreacion.HasValue)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-calendar-plus"></i>
+                            <strong>Fecha de creación:</strong> @ActividadEditar.FechaCreacion.Value.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    }
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault"
+                               @bind="actividad.ActividadActiva" disabled="@modoSoloLectura">
+                        <label class="form-check-label" for="flexSwitchCheckDefault">
+                            @(actividad.ActividadActiva ? "Visible a los estudiantes" : "No visible a los estudiantes")
+                        </label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fecha-actividad" class="form-label">Fecha de publicación para los estudiantes</label>
+                        <input type="datetime-local" id="fecha-entrega" class="form-control"
+                               @bind="actividad.FechaPublicacion" 
+                               min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-ddTHH:mm")"
+                               disabled="@modoSoloLectura" />
+                        <ValidationMessage For="@(() => actividad.FechaPublicacion)" />
+                        @if (!esModoEdicion && !modoSoloLectura && actividad.FechaPublicacion.HasValue && actividad.FechaPublicacion.Value.Date <= DateTime.Today)
+                        {
+                            <small class="text-danger">Solo se pueden crear actividades para días futuros (a partir de mañana).</small>
+                        }
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="titulo-actividad">Título</label>
+                        <input type="text" class="form-control" id="titulo-actividad"
+                               @bind="actividad.Titulo" disabled="@modoSoloLectura" />
+                        <ValidationMessage For="@(() => actividad.Titulo)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="descripcion-actividad">Descripción</label>
+                        <textarea class="form-control" id="descripcion-actividad" rows="3"
+                                  @bind="actividad.Descripcion" disabled="@modoSoloLectura"></textarea>
+                        <ValidationMessage For="@(() => actividad.Descripcion)" />
+                    </div>
+
+                    @if (!modoSoloLectura)
+                    {
+                        <div class="mb-3">
+                            <InputFile id="SubirArchivos" OnChange="HandleSelectedFiles" Multiple style="display: none;" 
+                                       accept=".pdf,.ppt,.pptx,.doc,.docx" />
+                            <button type="button" onclick="document.getElementById('SubirArchivos').click()" 
+                                    class="btn btn-primary">
+                                <i class="bi bi-arrow-bar-up"></i> Subir archivo
+                            </button>
+                        </div>
+                    }
+
+                    <ul class="list-group mb-3">
+                        @foreach (var archivo in ListArchivos)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@archivo.Nombre</span> - <span>@archivo.Tipo</span>
+                                @if (!modoSoloLectura)
+                                {
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                            @onclick="() => EliminarArchivo(archivo)">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                }
+                            </li>
+                        }
+                    </ul>
+
+                    @if (!string.IsNullOrEmpty(MensajeProcesos))
+                    {
+                        <div class="alert alert-info">
+                            @MensajeProcesos
+                        </div>
+                    }
+
+                    <div class="modal-footer">
+                        @if (modoSoloLectura)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
+                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-danger" @onclick="CerrarModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Actividad</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-container {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @@keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .btn-cerrar {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-fast);
+    }
+
+    .btn-cerrar:hover {
+        color: var(--color-text-primary);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1.5rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--border-radius-md);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: var(--color-text-white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: var(--color-primary-dark);
+    }
+
+    .btn-secondary {
+        background-color: var(--color-secondary);
+        color: var(--color-text-white);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-secondary-dark);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-sm);
+        font-size: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .alert-info {
+        background-color: var(--color-info-light);
+        color: var(--color-info-dark);
+    }
+</style>
+
+@code {
+    [Parameter] public bool Mostrar { get; set; }
+    [Parameter] public DateTime FechaSeleccionada { get; set; }
+    [Parameter] public int IdAsignacionAcademica { get; set; }
+    [Parameter] public int TipoActividadId { get; set; }
+    [Parameter] public ActividadCalendarioDto? ActividadEditar { get; set; }
+    [Parameter] public bool ModoSoloLectura { get; set; } = false;
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback OnActividadGuardada { get; set; }
+
+    private CrearActividadRequest actividad = new();
+    private List<ArchivoCargado> ListArchivos = new();
+    private string MensajeProcesos = "";
+    private string TituloModal = "";
+    private bool esModoEdicion => ActividadEditar != null;
+    private bool modoSoloLectura = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Mostrar)
+        {
+            modoSoloLectura = ModoSoloLectura;
+            
+            if (ActividadEditar != null)
+            {
+                // Modo edición: cargar datos completos de la actividad
+                try
+                {
+                    var actividadCompleta = await CalendarioService.ObtenerActividadCompleta(ActividadEditar.Id);
+                    
+                    actividad = new CrearActividadRequest
+                    {
+                        Titulo = actividadCompleta.Titulo ?? ActividadEditar.Titulo ?? "",
+                        Descripcion = actividadCompleta.Descripcion ?? "",
+                        FechaPublicacion = actividadCompleta.FechaPublicacion ?? ActividadEditar.FechaInicio,
+                        ActividadActiva = actividadCompleta.ActividadActiva
+                    };
+                    
+                    // Cargar archivos (nota: los archivos existentes se mostrarán pero no se pueden descargar sin implementar endpoint)
+                    // Por ahora, solo mostramos los archivos nuevos que se agreguen
+                    ListArchivos = new();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al cargar actividad completa: {ex.Message}");
+                    // Fallback a datos básicos
+                    actividad = new CrearActividadRequest
+                    {
+                        FechaPublicacion = ActividadEditar.FechaInicio,
+                        ActividadActiva = !ActividadEditar.Eliminado
+                    };
+                    ListArchivos = new();
+                }
+            }
+            else
+            {
+                actividad = new CrearActividadRequest
+                {
+                    FechaPublicacion = FechaSeleccionada,
+                    ActividadActiva = true
+                };
+                ListArchivos = new();
+            }
+            MensajeProcesos = "";
+            
+            TituloModal = TipoActividadId switch
+            {
+                11 => "Presentación (Sliders)",
+                12 => "Documento (Archivo)",
+                13 => "Recurso de Lectura",
+                16 => "Resumen de Clase (guía de clase)",
+                _ => "Material de Apoyo"
+            };
+        }
+    }
+
+    private async Task HandleSelectedFiles(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            try
+            {
+                if (file.Size > 5 * 1024 * 1024)
+                {
+                    MensajeProcesos = $"El archivo {file.Name} excede el tamaño máximo permitido (5MB).";
+                    continue;
+                }
+
+                var contentType = file.ContentType;
+                if (contentType != "application/pdf" &&
+                    contentType != "application/msword" &&
+                    contentType != "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+                    contentType != "application/vnd.ms-powerpoint" &&
+                    contentType != "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+                {
+                    MensajeProcesos = $"El archivo {file.Name} no tiene un formato válido.";
+                    continue;
+                }
+
+                const int bufferSize = 81920;
+                using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                using var memoryStream = new MemoryStream();
+                byte[] buffer = new byte[bufferSize];
+                int bytesRead;
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, bufferSize)) > 0)
+                {
+                    memoryStream.Write(buffer, 0, bytesRead);
+                }
+
+                byte[] fileData = memoryStream.ToArray();
+                string ruta = GetFileRoute(contentType, file.Name);
+                
+                // En WebAssembly, los archivos se suben al servidor mediante API
+                // Por ahora, guardamos la información del archivo para subirlo después
+                // TODO: Implementar endpoint en API para subir archivos
+                
+                ListArchivos.Add(new ArchivoCargado
+                {
+                    Nombre = file.Name,
+                    Tipo = GetFileType(contentType),
+                    Ruta = ruta,
+                    Datos = fileData // Guardar datos en memoria para subirlos después
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al procesar el archivo {file.Name}: {ex.Message}");
+            }
+        }
+    }
+
+    private string GetFileRoute(string contentType, string fileName)
+    {
+        string rutaBase = contentType switch
+        {
+            "application/pdf" => Path.Combine("Archivos", "PDFs"),
+            _ when contentType.StartsWith("audio/") => Path.Combine("Archivos", "Audios"),
+            _ when contentType.StartsWith("video/") => Path.Combine("Archivos", "Videos"),
+            _ => "Archivos"
+        };
+        return Path.Combine(rutaBase, fileName);
+    }
+
+    private int GetFileType(string contentType)
+    {
+        if (contentType == "application/pdf") return 1;
+        if (contentType.StartsWith("video/")) return 2;
+        if (contentType.StartsWith("audio/")) return 3;
+        return 4;
+    }
+
+    private void EliminarArchivo(ArchivoCargado archivo)
+    {
+        ListArchivos.Remove(archivo);
+    }
+
+    private void HabilitarEdicion()
+    {
+        modoSoloLectura = false;
+        StateHasChanged();
+    }
+
+    private async Task GuardarActividad()
+    {
+        try
+        {
+            // Validar que tenemos un IdAsignacionAcademica válido
+            if (IdAsignacionAcademica <= 0)
+            {
+                MensajeProcesos = "Error: No se ha seleccionado una asignación académica válida";
+                Console.WriteLine("❌ Error: IdAsignacionAcademica es inválido o cero");
+                return;
+            }
+
+            MensajeProcesos = esModoEdicion ? "Actualizando actividad..." : "Guardando actividad...";
+            
+            if (esModoEdicion && ActividadEditar != null)
+            {
+                // Obtener UsuarioId del usuario actual
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                var usuarioIdClaim = authState?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(usuarioIdClaim) || !int.TryParse(usuarioIdClaim, out int usuarioId))
+                {
+                    MensajeProcesos = "Error: No se pudo identificar al usuario actual";
+                    return;
+                }
+
+                // Modo actualización
+                // Construir lista de archivos
+                var archivosRequest = new List<ArchivoRequest>();
+                foreach (var archivo in ListArchivos)
+                {
+                    // TODO: Subir archivo al servidor y obtener nombre único y ruta
+                    // Por ahora, usamos el nombre original como nombre único temporalmente
+                    archivosRequest.Add(new ArchivoRequest
+                    {
+                        NombreOriginal = archivo.Nombre,
+                        NombreUnico = $"{Guid.NewGuid()}_{archivo.Nombre}",
+                        TipoArchivoId = archivo.Tipo,
+                        Ruta = archivo.Ruta,
+                        Renderizable = false,
+                        Datos = archivo.Datos
+                    });
+                }
+                
+                var requestActualizar = new ActualizarActividadRequest
+                {
+                    Id = ActividadEditar.Id, // ID de tab.asignacion_academica_recurso
+                    ActividadActiva = actividad.ActividadActiva,
+                    FechaPublicacion = actividad.FechaPublicacion,
+                    Titulo = actividad.Titulo,
+                    Descripcion = actividad.Descripcion,
+                    Archivos = archivosRequest.Any() ? archivosRequest : null,
+                    UsuarioId = usuarioId
+                };
+                
+                Console.WriteLine($"📤 Actualizando actividad con ID: {requestActualizar.Id}, UsuarioId: {usuarioId}");
+                
+                try
+                {
+                    var resultado = await CalendarioService.ActualizarActividad(requestActualizar);
+                    
+                    Console.WriteLine($"✅ Material de Apoyo actualizado exitosamente: {resultado}");
+                    MensajeProcesos = "Actividad actualizada correctamente";
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.WriteLine($"❌ No autorizado: {ex.Message}");
+                    MensajeProcesos = $"No autorizado: {ex.Message}";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error al actualizar: {ex.Message}");
+                    MensajeProcesos = $"Error al actualizar: {ex.Message}";
+                }
+            }
+            else
+            {
+                // Modo creación
+                // Obtener información del periodo actual
+                var periodoInfo = await AsignaturaService.ObtenerPeriodoActual();
+                int anioId = int.Parse(periodoInfo.Anio);
+                int periodoId = int.Parse(periodoInfo.Periodo);
+                
+                // Construir lista de archivos
+                var archivosRequest = new List<ArchivoRequest>();
+                foreach (var archivo in ListArchivos)
+                {
+                    // TODO: Subir archivo al servidor y obtener nombre único y ruta
+                    // Por ahora, usamos el nombre original como nombre único temporalmente
+                    archivosRequest.Add(new ArchivoRequest
+                    {
+                        NombreOriginal = archivo.Nombre,
+                        NombreUnico = $"{Guid.NewGuid()}_{archivo.Nombre}",
+                        TipoArchivoId = archivo.Tipo,
+                        Ruta = archivo.Ruta,
+                        Renderizable = false,
+                        Datos = archivo.Datos
+                    });
+                }
+                
+                // Construir el request
+                var request = new CrearActividadCompletaRequest
+                {
+                    ActividadActiva = actividad.ActividadActiva,
+                    FechaPublicacion = actividad.FechaPublicacion,
+                    Titulo = actividad.Titulo,
+                    Descripcion = actividad.Descripcion,
+                    TipoActividadId = TipoActividadId,
+                    AsignacionAcademicaId = IdAsignacionAcademica,
+                    PeriodoId = periodoId,
+                    AnioId = anioId,
+                    Archivos = archivosRequest.Any() ? archivosRequest : null
+                };
+                
+                await CalendarioService.CrearActividad(request);
+                
+                MensajeProcesos = "Actividad guardada correctamente";
+            }
+            
+            await Task.Delay(1000);
+            
+            if (OnActividadGuardada.HasDelegate)
+            {
+                await OnActividadGuardada.InvokeAsync();
+            }
+            
+            await CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            MensajeProcesos = $"Error al guardar la actividad: {ex.Message}";
+            Console.WriteLine($"Error al guardar actividad: {ex.Message}");
+        }
+    }
+
+    private async Task CerrarModal()
+    {
+        if (OnCerrar.HasDelegate)
+        {
+            await OnCerrar.InvokeAsync();
+        }
+    }
+
+    private class ArchivoCargado
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public int Tipo { get; set; }
+        public string Ruta { get; set; } = string.Empty;
+        public byte[]? Datos { get; set; }
+    }
+}

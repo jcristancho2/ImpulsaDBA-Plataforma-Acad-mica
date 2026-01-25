@@ -1,0 +1,259 @@
+@using ImpulsaDBA.Shared.DTOs
+@using ImpulsaDBA.Shared.Requests
+@using ImpulsaDBA.Client.Services
+@inject CalendarioService CalendarioService
+
+@if (Mostrar)
+{
+    <div class="modal-overlay" @onclick="CerrarModal" style="z-index: 9999;">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Crear Nueva Actividad</h3>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(MensajeError))
+                {
+                    <div class="alert alert-error">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        @MensajeError
+                    </div>
+                }
+
+                <!-- Sección 1: Lista de tipos de actividades -->
+                <div class="modal-section">
+                    <label class="section-label">Selecciona el tipo de actividad</label>
+                    <div class="tipos-actividades">
+                        @foreach (var tipo in tiposActividades)
+                        {
+                            <div class="tipo-actividad-item"
+                                 @onclick="() => SeleccionarTipo(tipo)">
+                                <i class="bi @tipo.Icono"></i>
+                                <span>@tipo.Nombre</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999 !important;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-container {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @@keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .btn-cerrar {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-fast);
+    }
+
+    .btn-cerrar:hover {
+        color: var(--color-text-primary);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-error {
+        background-color: var(--color-danger-light);
+        color: var(--color-danger-dark);
+    }
+
+    .modal-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-label {
+        display: block;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .tipos-actividades {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .tipo-actividad-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: 2px solid var(--color-border);
+        border-radius: var(--border-radius-md);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        background-color: var(--color-bg-primary);
+    }
+
+    .tipo-actividad-item:hover {
+        border-color: var(--color-primary);
+        background-color: var(--color-bg-secondary);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px var(--color-shadow);
+    }
+
+    .tipo-actividad-item i:first-child {
+        font-size: 1.5rem;
+        color: var(--color-primary);
+    }
+
+    .tipo-actividad-item span {
+        flex: 1;
+        color: var(--color-text-primary);
+        font-size: 0.9rem;
+    }
+
+
+    @@media (max-width: 768px) {
+        .modal-container {
+            width: 95%;
+            max-height: 90vh;
+        }
+
+        .tipos-actividades {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public bool Mostrar { get; set; }
+    [Parameter] public DateTime FechaSeleccionada { get; set; }
+    [Parameter] public EventCallback<TipoActividadDto> OnTipoSeleccionado { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+
+    private List<TipoActividadDto> tiposActividades = new();
+    private string MensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTiposActividades();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Mostrar)
+        {
+            await ValidarFecha();
+        }
+    }
+
+    private async Task CargarTiposActividades()
+    {
+        tiposActividades = await CalendarioService.ObtenerTiposActividades();
+    }
+
+    private async Task ValidarFecha()
+    {
+        MensajeError = string.Empty;
+        var hoy = DateTime.Today;
+        var manana = hoy.AddDays(1);
+
+        // Solo permitir días siguientes (mañana en adelante)
+        if (FechaSeleccionada.Date < manana)
+        {
+            MensajeError = "Solo se pueden crear actividades para días futuros (a partir de mañana).";
+            return;
+        }
+    }
+
+    private async Task SeleccionarTipo(TipoActividadDto tipo)
+    {
+        MensajeError = string.Empty;
+        if (OnTipoSeleccionado.HasDelegate)
+        {
+            await OnTipoSeleccionado.InvokeAsync(tipo);
+        }
+    }
+
+    private async Task CerrarModal()
+    {
+        MensajeError = string.Empty;
+        if (OnCerrar.HasDelegate)
+        {
+            await OnCerrar.InvokeAsync();
+        }
+    }
+}
