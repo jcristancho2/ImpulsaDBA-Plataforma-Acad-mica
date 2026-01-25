@@ -64,55 +64,83 @@
         window.quillInstances = window.quillInstances || {};
 
         window.initQuillEditor = (editorId, dotNetRef, initialContent) => {
-            if (typeof Quill === 'undefined') {
-                console.error('QuillJS no está cargado');
-                return;
+            try {
+                if (typeof Quill === 'undefined') {
+                    console.error('QuillJS no está cargado. Verifica que el script esté incluido correctamente.');
+                    return;
+                }
+
+                const editorElement = document.getElementById(editorId);
+                if (!editorElement) {
+                    console.error(`No se encontró el elemento con ID: ${editorId}`);
+                    return;
+                }
+
+                // Limpiar contenido previo del elemento
+                editorElement.innerHTML = '';
+
+                // Si ya existe una instancia, destruirla primero
+                if (window.quillInstances && window.quillInstances[editorId]) {
+                    try {
+                        // Intentar destruir la instancia anterior si tiene método destroy
+                        if (window.quillInstances[editorId].root) {
+                            window.quillInstances[editorId].root.innerHTML = '';
+                        }
+                    } catch (e) {
+                        console.warn('Error al limpiar instancia anterior:', e);
+                    }
+                    delete window.quillInstances[editorId];
+                }
+
+                // Crear nueva instancia de Quill con barra de herramientas completa
+                const quill = new Quill(`#${editorId}`, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'align': [] }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            [{ 'script': 'sub'}, { 'script': 'super' }],
+                            ['link', 'image', 'video'],
+                            ['code-block', 'blockquote'],
+                            ['clean']
+                        ]
+                    },
+                    placeholder: 'Escribe el contenido aquí...'
+                });
+
+                // Establecer contenido inicial
+                if (initialContent && initialContent.trim() !== '') {
+                    quill.root.innerHTML = initialContent;
+                }
+
+                // Escuchar cambios
+                quill.on('text-change', function() {
+                    try {
+                        const content = quill.root.innerHTML;
+                        if (dotNetRef && dotNetRef.invokeMethodAsync) {
+                            dotNetRef.invokeMethodAsync('OnEditorContentChanged', editorId, content)
+                                .catch(err => console.error('Error al invocar OnEditorContentChanged:', err));
+                        }
+                    } catch (error) {
+                        console.error('Error en text-change handler:', error);
+                    }
+                });
+
+                // Guardar instancia
+                if (!window.quillInstances) {
+                    window.quillInstances = {};
+                }
+                window.quillInstances[editorId] = quill;
+                
+                console.log(`Quill editor inicializado exitosamente para: ${editorId}`);
+            } catch (error) {
+                console.error('Error al inicializar Quill editor:', error);
+                console.error('EditorId:', editorId);
             }
-
-            const editorElement = document.getElementById(editorId);
-            if (!editorElement) {
-                console.error(`No se encontró el elemento con ID: ${editorId}`);
-                return;
-            }
-
-            // Si ya existe una instancia, destruirla primero
-            if (window.quillInstances[editorId]) {
-                delete window.quillInstances[editorId];
-            }
-
-            // Crear nueva instancia de Quill con barra de herramientas completa
-            const quill = new Quill(`#${editorId}`, {
-                theme: 'snow',
-                modules: {
-                    toolbar: [
-                        [{ 'header': [1, 2, 3, false] }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        [{ 'color': [] }, { 'background': [] }],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        [{ 'align': [] }],
-                        [{ 'indent': '-1'}, { 'indent': '+1' }],
-                        [{ 'script': 'sub'}, { 'script': 'super' }],
-                        ['link', 'image', 'video'],
-                        ['code-block', 'blockquote'],
-                        ['clean']
-                    ]
-                },
-                placeholder: 'Escribe el contenido aquí...'
-            });
-
-            // Establecer contenido inicial
-            if (initialContent) {
-                quill.root.innerHTML = initialContent;
-            }
-
-            // Escuchar cambios
-            quill.on('text-change', function() {
-                const content = quill.root.innerHTML;
-                dotNetRef.invokeMethodAsync('OnEditorContentChanged', editorId, content);
-            });
-
-            // Guardar instancia
-            window.quillInstances[editorId] = quill;
         };
 
         window.getQuillContent = (editorId) => {

@@ -369,13 +369,23 @@
     private DotNetObjectReference<Asignaciones>? dotNetRef;
     private bool esModoEdicion => ActividadEditar != null;
     private bool modoSoloLectura = false;
+    private bool editorInitialized = false;
 
     protected override async Task OnParametersSetAsync()
     {
         if (Mostrar)
         {
             modoSoloLectura = ModoSoloLectura;
-            editorId = $"quill-editor-{GetHashCode()}";
+            
+            // Generar un ID único y estable para el editor solo si no existe
+            if (string.IsNullOrEmpty(editorId))
+            {
+                var activityId = ActividadEditar?.Id ?? 0;
+                editorId = $"quill-editor-{IdAsignacionAcademica}-{TipoActividadId}-{activityId}-{GetHashCode()}";
+            }
+            
+            // Resetear flag de inicialización cuando cambian los parámetros importantes
+            editorInitialized = false;
             
             if (ActividadEditar != null)
             {
@@ -439,12 +449,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Mostrar && !string.IsNullOrEmpty(editorId))
+        if (Mostrar && !string.IsNullOrEmpty(editorId) && !editorInitialized)
         {
             try
             {
-                // Esperar un momento para que el DOM esté listo
-                await Task.Delay(150);
+                // Esperar un momento para que el DOM esté completamente listo
+                await Task.Delay(300);
                 
                 // Verificar que Quill esté disponible globalmente
                 var quillAvailable = await JSRuntime.InvokeAsync<bool>("eval", "typeof Quill !== 'undefined'");
@@ -454,23 +464,50 @@
                     return;
                 }
 
-                // Verificar si el editor ya existe
-                var editorExists = await JSRuntime.InvokeAsync<bool>("eval", 
-                    $"document.getElementById('{editorId}') !== null && window.quillInstances && window.quillInstances['{editorId}'] === undefined");
-
-                if (editorExists)
+                // Verificar si el elemento del editor existe en el DOM
+                var elementExists = await JSRuntime.InvokeAsync<bool>("eval", 
+                    $"document.getElementById('{editorId}') !== null");
+                
+                if (!elementExists)
                 {
-                    // Inicializar Quill usando JSInterop
-                    if (dotNetRef == null)
+                    Console.WriteLine($"El elemento del editor con ID '{editorId}' no se encontró en el DOM. Reintentando...");
+                    // Intentar de nuevo después de un delay adicional
+                    await Task.Delay(300);
+                    elementExists = await JSRuntime.InvokeAsync<bool>("eval", 
+                        $"document.getElementById('{editorId}') !== null");
+                    
+                    if (!elementExists)
                     {
-                        dotNetRef = DotNetObjectReference.Create(this);
+                        Console.WriteLine($"El elemento del editor con ID '{editorId}' aún no está disponible después del segundo intento");
+                        return;
                     }
-                    await JSRuntime.InvokeVoidAsync("initQuillEditor", editorId, dotNetRef, contenidoEditor);
                 }
+
+                // Verificar si ya existe una instancia de Quill para este editor
+                var instanceExists = await JSRuntime.InvokeAsync<bool>("eval", 
+                    $"window.quillInstances && window.quillInstances['{editorId}'] !== undefined");
+
+                // Si ya existe una instancia, destruirla primero
+                if (instanceExists)
+                {
+                    await JSRuntime.InvokeVoidAsync("eval", 
+                        $"if (window.quillInstances && window.quillInstances['{editorId}']) {{ delete window.quillInstances['{editorId}']; }}");
+                }
+
+                // Inicializar Quill usando JSInterop
+                if (dotNetRef == null)
+                {
+                    dotNetRef = DotNetObjectReference.Create(this);
+                }
+                
+                await JSRuntime.InvokeVoidAsync("initQuillEditor", editorId, dotNetRef, contenidoEditor);
+                editorInitialized = true;
+                Console.WriteLine($"Editor Quill inicializado correctamente con ID: {editorId}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al inicializar Quill: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
             }
         }
     }
@@ -736,6 +773,10 @@
 
     private async Task CerrarModal()
     {
+        // Limpiar el editor cuando se cierra el modal
+        editorInitialized = false;
+        editorId = "";
+        
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();

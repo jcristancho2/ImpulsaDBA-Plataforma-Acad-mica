@@ -23,10 +23,8 @@ check_port() {
 
 # Verificar puertos
 echo "🔍 Verificando puertos..."
-check_port 7001 && echo -e "${GREEN}✓${NC} Puerto 7001 (API HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 7001 en uso"
-check_port 5001 && echo -e "${GREEN}✓${NC} Puerto 5001 (API HTTP) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5001 en uso"
-check_port 7023 && echo -e "${GREEN}✓${NC} Puerto 7023 (Cliente HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 7023 en uso"
-check_port 5079 && echo -e "${GREEN}✓${NC} Puerto 5079 (Cliente HTTP) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5079 en uso"
+check_port 5001 && echo -e "${GREEN}✓${NC} Puerto 5001 (API HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5001 en uso"
+check_port 5079 && echo -e "${GREEN}✓${NC} Puerto 5079 (Cliente HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5079 en uso"
 echo ""
 
 # Verificar que los proyectos existan
@@ -44,12 +42,12 @@ fi
 run_api() {
     echo -e "${BLUE}📡 Iniciando API Backend...${NC}"
     cd ImpulsaDBA.API
-    dotnet run &
+    dotnet run --launch-profile http &
     API_PID=$!
     cd ..
     echo -e "${GREEN}✓ API iniciado (PID: $API_PID)${NC}"
-    echo -e "   URL: https://localhost:7001"
-    echo -e "   Swagger: https://localhost:7001/swagger"
+    echo -e "   URL: https://localhost:5001"
+    echo -e "   Swagger: https://localhost:5001/swagger"
     echo ""
 }
 
@@ -58,11 +56,11 @@ run_client() {
     echo -e "${BLUE}🌐 Iniciando Cliente Blazor WebAssembly...${NC}"
     sleep 3  # Esperar un poco para que el API inicie
     cd ImpulsaDBA.Client
-    dotnet run &
+    dotnet run --launch-profile http &
     CLIENT_PID=$!
     cd ..
     echo -e "${GREEN}✓ Cliente iniciado (PID: $CLIENT_PID)${NC}"
-    echo -e "   URL: https://localhost:7023"
+    echo -e "   URL: https://localhost:5079"
     echo ""
 }
 
@@ -71,13 +69,20 @@ cleanup() {
     echo ""
     echo -e "${YELLOW}🛑 Deteniendo procesos...${NC}"
     if [ ! -z "$API_PID" ]; then
+        # Matar el proceso y sus hijos
+        pkill -P $API_PID 2>/dev/null
         kill $API_PID 2>/dev/null
         echo -e "${GREEN}✓ API detenido${NC}"
     fi
     if [ ! -z "$CLIENT_PID" ]; then
+        # Matar el proceso y sus hijos
+        pkill -P $CLIENT_PID 2>/dev/null
         kill $CLIENT_PID 2>/dev/null
         echo -e "${GREEN}✓ Cliente detenido${NC}"
     fi
+    # Limpiar procesos dotnet huérfanos en los puertos
+    lsof -ti:5001 | xargs kill -9 2>/dev/null
+    lsof -ti:5079 | xargs kill -9 2>/dev/null
     exit 0
 }
 
@@ -92,7 +97,7 @@ echo -e "${GREEN}✅ Ambos proyectos están ejecutándose${NC}"
 echo ""
 echo "📝 Para detener, presiona Ctrl+C"
 echo ""
-echo "🌐 Abre tu navegador en: https://localhost:7023"
+echo "🌐 Abre tu navegador en: https://localhost:5079"
 echo ""
 
 # Esperar indefinidamente
