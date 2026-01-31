@@ -40,7 +40,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="fecha-actividad" class="form-label">Fecha de Encuentro</label>
+                        <label for="fecha-actividad" class="form-label">Fecha de Calendario</label>
                         <input type="datetime-local" id="fecha-entrega" class="form-control"
                                @bind="actividad.FechaPublicacion" 
                                min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-ddTHH:mm")"
@@ -84,10 +84,7 @@
                     <div class="modal-footer">
                         @if (modoSoloLectura)
                         {
-                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
-                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
-                                <i class="bi bi-pencil"></i> Editar
-                            </button>
+                            @* Filtro por grupo: solo visualización, sin botones Cerrar ni Editar (se cierra con la X del header) *@
                         }
                         else
                         {

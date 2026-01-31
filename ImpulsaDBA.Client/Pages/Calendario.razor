@@ -42,11 +42,11 @@
                     <div class="filtro-item">
                         <label for="select-tipo-filtro">Tipo de vista:</label>
                         <select id="select-tipo-filtro" class="select-filtro" @onchange="OnTipoFiltroChange">
-                            <option value="materias" selected="@(tipoFiltro == "materias")">Mis Materias</option>
+                            <option value="asignaturas" selected="@(tipoFiltro == "asignaturas")">Mis Asignaturas</option>
                             <option value="grupo" selected="@(tipoFiltro == "grupo")">Por Grupo (Todos los docentes)</option>
                         </select>
                     </div>
-                    @if (tipoFiltro == "materias")
+                    @if (tipoFiltro == "asignaturas")
                     {
                         <div class="filtro-item">
                             <label for="select-asignatura">Filtrar por asignatura:</label>
@@ -89,6 +89,7 @@
                                 TipoFiltro="@tipoFiltro"
                                 OnDiaSeleccionado="OnDiaClick"
                                 OnActividadSeleccionada="OnActividadClick"
+                                OnActividadEliminada="RecargarCalendarioDespuesEliminar"
                                 @ref="calendarioComponentRef" />
         </div>
     }
@@ -105,7 +106,7 @@
                  FechaSeleccionada="@fechaSeleccionadaModal"
                  IdAsignacionAcademica="@idAsignacionAcademicaActual"
                  ActividadEditar="@(actividadEditando?.IdTipoActividad == 1 ? actividadEditando : null)"
-                 ModoSoloLectura="@(actividadEditando != null && actividadEditando.IdTipoActividad == 1 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+                 ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && actividadEditando.IdTipoActividad == 1 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
                  OnCerrar="CerrarVideoEngancheModal"
                  OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -114,7 +115,7 @@
                             FechaSeleccionada="@fechaSeleccionadaModal"
                             IdAsignacionAcademica="@idAsignacionAcademicaActual"
                             ActividadEditar="@(actividadEditando?.IdTipoActividad == 2 ? actividadEditando : null)"
-                            ModoSoloLectura="@(actividadEditando != null && actividadEditando.IdTipoActividad == 2 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+                            ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && actividadEditando.IdTipoActividad == 2 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
                             OnCerrar="CerrarPreguntasModal"
                             OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -124,7 +125,7 @@
                     IdAsignacionAcademica="@idAsignacionAcademicaActual"
                     TipoActividadId="@tipoActividadSeleccionadoId"
                     ActividadEditar="@(actividadEditando != null && (actividadEditando.IdTipoActividad == 3 || actividadEditando.IdTipoActividad == 10) ? actividadEditando : null)"
-                    ModoSoloLectura="@(actividadEditando != null && (actividadEditando.IdTipoActividad == 3 || actividadEditando.IdTipoActividad == 10) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+                    ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && (actividadEditando.IdTipoActividad == 3 || actividadEditando.IdTipoActividad == 10) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
                     OnCerrar="CerrarRecursoInteractivoModal"
                     OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -134,7 +135,7 @@
               IdAsignacionAcademica="@idAsignacionAcademicaActual"
               TipoActividadId="@tipoActividadSeleccionadoId"
               ActividadEditar="@(actividadEditando != null && (actividadEditando.IdTipoActividad >= 4 && actividadEditando.IdTipoActividad <= 9) ? actividadEditando : null)"
-              ModoSoloLectura="@(actividadEditando != null && (actividadEditando.IdTipoActividad >= 4 && actividadEditando.IdTipoActividad <= 9) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+              ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && (actividadEditando.IdTipoActividad >= 4 && actividadEditando.IdTipoActividad <= 9) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
               OnCerrar="CerrarAsignacionesModal"
               OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -144,7 +145,7 @@
                IdAsignacionAcademica="@idAsignacionAcademicaActual"
                TipoActividadId="@tipoActividadSeleccionadoId"
                ActividadEditar="@(actividadEditando != null && (actividadEditando.IdTipoActividad == 11 || actividadEditando.IdTipoActividad == 12 || actividadEditando.IdTipoActividad == 13 || actividadEditando.IdTipoActividad == 16) ? actividadEditando : null)"
-               ModoSoloLectura="@(actividadEditando != null && (actividadEditando.IdTipoActividad == 11 || actividadEditando.IdTipoActividad == 12 || actividadEditando.IdTipoActividad == 13 || actividadEditando.IdTipoActividad == 16) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+               ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && (actividadEditando.IdTipoActividad == 11 || actividadEditando.IdTipoActividad == 12 || actividadEditando.IdTipoActividad == 13 || actividadEditando.IdTipoActividad == 16) && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
                OnCerrar="CerrarMaterialApoyoModal"
                OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -153,7 +154,7 @@
               FechaSeleccionada="@fechaSeleccionadaModal"
               IdAsignacionAcademica="@idAsignacionAcademicaActual"
               ActividadEditar="@(actividadEditando?.IdTipoActividad == 14 ? actividadEditando : null)"
-              ModoSoloLectura="@(actividadEditando != null && actividadEditando.IdTipoActividad == 14 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+              ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && actividadEditando.IdTipoActividad == 14 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
               OnCerrar="CerrarClaseVirtualModal"
               OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -162,7 +163,7 @@
             FechaSeleccionada="@fechaSeleccionadaModal"
             IdAsignacionAcademica="@idAsignacionAcademicaActual"
             ActividadEditar="@(actividadEditando?.IdTipoActividad == 17 ? actividadEditando : null)"
-            ModoSoloLectura="@(actividadEditando != null && actividadEditando.IdTipoActividad == 17 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value))"
+            ModoSoloLectura="@(tipoFiltro == "grupo" || (actividadEditando != null && actividadEditando.IdTipoActividad == 17 && !(usuarioIdActual.HasValue && actividadEditando.IdProfesor.HasValue && actividadEditando.IdProfesor.Value == usuarioIdActual.Value)))"
             OnCerrar="CerrarEvaluacionModal"
             OnActividadGuardada="RecargarCalendarioDespuesGuardar" />
 
@@ -301,7 +302,7 @@
     
     private List<GrupoInfo> gruposDisponibles = new();
     private GrupoInfo? grupoSeleccionado;
-    private string tipoFiltro = "materias"; // "materias" o "grupo"
+    private string tipoFiltro = "asignaturas"; // "asignaturas" o "grupo"
     
     private int idAsignacionAcademicaActual = 0;
     private bool isLoading = true;
@@ -386,7 +387,7 @@
 
     private void OnTipoFiltroChange(ChangeEventArgs e)
     {
-        tipoFiltro = e.Value?.ToString() ?? "materias";
+        tipoFiltro = e.Value?.ToString() ?? "asignaturas";
         
         if (tipoFiltro == "grupo")
         {
@@ -454,6 +455,13 @@
     {
         Console.WriteLine($"📅 Click en fecha: {fecha:yyyy-MM-dd}");
         fechaSeleccionadaModal = fecha;
+
+        // Con filtro por grupo: no se permite crear actividades, solo visualizar
+        if (tipoFiltro == "grupo")
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "En la vista por grupo (todos los docentes) solo se permite visualizar actividades. Para crear o editar, use la vista 'Mis Asignaturas'.");
+            return;
+        }
         
         // Si estamos en modo grupo y no hay asignación académica, obtener una del grupo
         if (tipoFiltro == "grupo" && grupoSeleccionado != null && idAsignacionAcademicaActual == 0)
@@ -478,10 +486,10 @@
                 // Por ahora solo logueamos el error
             }
         }
-        // Si estamos en modo materias y no hay asignación académica seleccionada
-        else if (tipoFiltro == "materias" && idAsignacionAcademicaActual == 0)
+        // Si estamos en modo asignaturas y no hay asignación académica seleccionada
+        else if (tipoFiltro == "asignaturas" && idAsignacionAcademicaActual == 0)
         {
-            Console.WriteLine($"⚠️ Advertencia: No hay asignación académica seleccionada en modo materias");
+            Console.WriteLine($"⚠️ Advertencia: No hay asignación académica seleccionada en modo asignaturas");
             await JSRuntime.InvokeVoidAsync("alert", "Por favor, seleccione una asignatura antes de crear una actividad.");
             return;
         }
@@ -636,32 +644,32 @@
     {
         try
         {
-            Console.WriteLine("🔄 Recargando calendario después de guardar actividad...");
-            
-            // Recargar inmediatamente el calendario
+            // Una sola recarga del calendario (evita múltiples renderizados)
             if (calendarioComponentRef != null)
             {
                 await calendarioComponentRef.RecargarCalendario();
             }
-            
-            // Mostrar notificación de éxito
+
             mensajeExito = "✓ Actividad guardada exitosamente en la base de datos";
-            mostrarMensajeExito = true;
+            mostrarMensajeExito = false;
+            actividadEditando = null;
             StateHasChanged();
-            
-            // Ocultar el mensaje después de 3 segundos
+
             await Task.Delay(3000);
             mostrarMensajeExito = false;
             mensajeExito = null;
             StateHasChanged();
-            
-            actividadEditando = null;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error al recargar calendario: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
+    }
+
+    private void RecargarCalendarioDespuesEliminar()
+    {
+        actividadEditando = null;
+        StateHasChanged();
     }
 
     private int? usuarioIdActual = null;

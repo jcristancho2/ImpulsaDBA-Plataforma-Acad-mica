@@ -13,21 +13,11 @@ namespace ImpulsaDBA.API.Application.Services
     {
         private readonly ImpulsaDBA.API.Infrastructure.Database.DatabaseService _databaseService;
 
-        // Paleta de colores pastel para asignar a las cards de asignaturas.
-        // Los valores corresponden a variables definidas en wwwroot/css/app.css
-        private static readonly string[] PastelColorVariables = new[]
-        {
-            "--color-pastel-sky-blue",
-            "--color-pastel-blue-green",
-            "--color-pastel-ocean",
-            "--color-pastel-teal",
-            "--color-pastel-verde",
-            "--color-pastel-salmon",
-            "--color-pastel-tulip",
-            "--color-pastel-amber",
-            "--color-pastel-mauve",
-            "--color-pastel-peach"
-        };
+        /// <summary>
+        /// Color por defecto (hex) cuando la asignatura no tiene color en bas.paleta.
+        /// No se usan variables CSS; solo colores hexadecimales.
+        /// </summary>
+        private const string ColorHexDefault = "#e0e0e0";
 
         public AsignaturaService(ImpulsaDBA.API.Infrastructure.Database.DatabaseService databaseService)
         {
@@ -43,39 +33,62 @@ namespace ImpulsaDBA.API.Application.Services
             try
             {
                 var query = @"
+                    WITH AsigConOrden AS (
+                        SELECT 
+                            AA.id              AS id_asignacion_academica,
+                            P.id               AS id_profesor,
+                            A.id               AS id_asignatura,
+                            G.id               AS id_grupo,
+                            A.asignatura       AS nombre,
+                            G.nombre           AS nombre_grupo,
+                            C.colegio          AS nombre_institucion,
+                            S.sede             AS nombre_sede,
+                            (
+                                SELECT COUNT(*) 
+                                FROM aca.lista AS L 
+                                WHERE L.id_grupo = G.id 
+                                  AND ISNULL(L.inactivo, 0) = 0
+                            ) AS cantidad_estudiantes,
+                            AR.id_area_men     AS id_area_men,
+                            ROW_NUMBER() OVER (PARTITION BY P.id, AR.id_area_men ORDER BY A.asignatura, G.nombre) AS area_men_orden
+                        FROM 
+                            col.persona AS P
+                        INNER JOIN 
+                            plla.View_Asignacion_Academica AS AA ON P.id = AA.id_profesor
+                        INNER JOIN 
+                            aca.grupo AS G ON AA.id_grupo = G.id
+                        INNER JOIN 
+                            col.sede AS S ON G.id_sede = S.id
+                        INNER JOIN 
+                            bas.anio AS AN ON G.id_anio = AN.id
+                        INNER JOIN 
+                            bas.colegio AS C ON AN.id_colegio = C.id
+                        INNER JOIN 
+                            col.asignatura AS A ON AA.id_asignatura = A.id
+                        LEFT JOIN 
+                            col.area AS AR ON A.id_area = AR.id
+                        WHERE 
+                            P.id = @ProfesorId
+                    )
                     SELECT 
-                        AA.id              AS id_asignacion_academica,
-                        P.id               AS id_profesor,
-                        A.id               AS id_asignatura,
-                        G.id               AS id_grupo,
-                        A.asignatura       AS nombre,
-                        G.nombre           AS nombre_grupo,
-                        C.colegio          AS nombre_institucion,
-                        S.sede             AS nombre_sede,
-                        (
-                            SELECT COUNT(*) 
-                            FROM aca.lista AS L 
-                            WHERE L.id_grupo = G.id 
-                              AND ISNULL(L.inactivo, 0) = 0
-                        ) AS cantidad_estudiantes
+                        ACO.id_asignacion_academica,
+                        ACO.id_profesor,
+                        ACO.id_asignatura,
+                        ACO.id_grupo,
+                        ACO.nombre,
+                        ACO.nombre_grupo,
+                        ACO.nombre_institucion,
+                        ACO.nombre_sede,
+                        ACO.cantidad_estudiantes,
+                        PAL.color_hexadecimal AS color_hex
                     FROM 
-                        col.persona AS P
-                    INNER JOIN 
-                        plla.View_Asignacion_Academica AS AA ON P.id = AA.id_profesor
-                    INNER JOIN 
-                        aca.grupo AS G ON AA.id_grupo = G.id
-                    INNER JOIN 
-                        col.sede AS S ON G.id_sede = S.id
-                    INNER JOIN 
-                        bas.anio AS AN ON G.id_anio = AN.id
-                    INNER JOIN 
-                        bas.colegio AS C ON AN.id_colegio = C.id
-                    INNER JOIN 
-                        col.asignatura AS A ON AA.id_asignatura = A.id
-                    WHERE 
-                        P.id = @ProfesorId
+                        AsigConOrden AS ACO
+                    LEFT JOIN 
+                        bas.area_men_paleta AS AMP ON ACO.id_area_men = AMP.id_area_men AND AMP.orden = ACO.area_men_orden
+                    LEFT JOIN 
+                        bas.paleta AS PAL ON AMP.id_paleta = PAL.id
                     ORDER BY 
-                        A.asignatura, G.nombre";
+                        ACO.nombre, ACO.nombre_grupo";
 
                 var parameters = new Dictionary<string, object>
                 {
@@ -103,10 +116,19 @@ namespace ImpulsaDBA.API.Application.Services
                                       ?? string.Empty
                     };
 
-                    // Asignar un color pastel pseudo-aleatorio pero estable por asignatura,
-                    // usando el id de la asignatura como base.
-                    var colorIndex = Math.Abs(asignatura.Id.GetHashCode()) % PastelColorVariables.Length;
-                    asignatura.ColorHex = $"var({PastelColorVariables[colorIndex]})";
+                    // Color: usar bas.paleta (vía col.area -> area_men -> area_men_paleta -> paleta).
+                    // Si no hay color en BD, usar color hex por defecto (no CSS).
+                    var colorHexDb = row["color_hex"]?.ToString()?.Trim();
+                    if (!string.IsNullOrEmpty(colorHexDb))
+                    {
+                        asignatura.ColorHex = colorHexDb.StartsWith("#", StringComparison.Ordinal)
+                            ? colorHexDb
+                            : "#" + colorHexDb;
+                    }
+                    else
+                    {
+                        asignatura.ColorHex = ColorHexDefault;
+                    }
 
                     // Cantidad de estudiantes ya viene contada en la consulta
                     asignatura.CantidadEstudiantes = Convert.ToInt32(row["cantidad_estudiantes"] ?? 0);

@@ -105,7 +105,9 @@ namespace ImpulsaDBA.Client.Services
                 return new LoginResponse 
                 { 
                     Success = false, 
-                    Message = $"Error al autenticar: {response.StatusCode}" 
+                    Message = response.StatusCode == System.Net.HttpStatusCode.Unauthorized 
+                        ? "Contraseña incorrecta" 
+                        : $"Error al autenticar: {response.StatusCode}" 
                 };
             }
             catch (Exception ex)

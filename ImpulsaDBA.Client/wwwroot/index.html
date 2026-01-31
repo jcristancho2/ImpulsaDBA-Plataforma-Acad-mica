@@ -79,15 +79,17 @@
                 // Limpiar contenido previo del elemento
                 editorElement.innerHTML = '';
 
-                // Si ya existe una instancia, destruirla primero
+                // Si ya existe una instancia, destruirla por completo (evita toolbars duplicados al reabrir)
                 if (window.quillInstances && window.quillInstances[editorId]) {
                     try {
-                        // Intentar destruir la instancia anterior si tiene método destroy
-                        if (window.quillInstances[editorId].root) {
-                            window.quillInstances[editorId].root.innerHTML = '';
+                        const oldQuill = window.quillInstances[editorId];
+                        if (typeof oldQuill.destroy === 'function') {
+                            oldQuill.destroy();
+                        } else if (oldQuill.root && oldQuill.root.parentNode) {
+                            oldQuill.root.parentNode.removeChild(oldQuill.root);
                         }
                     } catch (e) {
-                        console.warn('Error al limpiar instancia anterior:', e);
+                        console.warn('Error al destruir instancia anterior:', e);
                     }
                     delete window.quillInstances[editorId];
                 }
@@ -148,6 +150,24 @@
                 return window.quillInstances[editorId].root.innerHTML;
             }
             return '';
+        };
+
+        // Destruir instancia de Quill por ID (evita toolbars duplicados al cerrar/reabrir modal)
+        window.destroyQuillEditor = (editorId) => {
+            if (!editorId || !window.quillInstances) return;
+            const quill = window.quillInstances[editorId];
+            if (quill) {
+                try {
+                    if (typeof quill.destroy === 'function') {
+                        quill.destroy();
+                    } else if (quill.root && quill.root.parentNode) {
+                        quill.root.parentNode.removeChild(quill.root);
+                    }
+                } catch (e) {
+                    console.warn('Error al destruir Quill:', e);
+                }
+                delete window.quillInstances[editorId];
+            }
         };
     </script>
     <script>

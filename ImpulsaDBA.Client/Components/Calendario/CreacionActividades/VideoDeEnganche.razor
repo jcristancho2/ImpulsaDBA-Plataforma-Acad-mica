@@ -141,10 +141,7 @@
                     <div class="modal-footer">
                         @if (modoSoloLectura)
                         {
-                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
-                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
-                                <i class="bi bi-pencil"></i> Editar
-                            </button>
+                            @* Filtro por grupo: solo visualización, sin botones Cerrar ni Editar (se cierra con la X del header) *@
                         }
                         else
                         {

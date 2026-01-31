@@ -47,7 +47,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="fecha-actividad" class="form-label">Fecha Programada</label>
+                        <label for="fecha-actividad" class="form-label">Fecha Calendario</label>
                         <div class="input-group">
                             <input type="datetime-local" id="fecha-actividad" class="form-control"
                                    @bind="actividad.FechaPublicacion" 
@@ -83,10 +83,7 @@
                     <div class="modal-footer">
                         @if (modoSoloLectura)
                         {
-                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
-                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
-                                <i class="bi bi-pencil"></i> Editar
-                            </button>
+                            @* Filtro por grupo: solo visualización, sin botones Cerrar ni Editar (se cierra con la X del header) *@
                         }
                         else
                         {

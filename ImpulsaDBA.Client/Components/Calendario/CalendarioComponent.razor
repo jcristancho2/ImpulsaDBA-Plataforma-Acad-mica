@@ -175,10 +175,13 @@
                     <div class="sin-actividades">
                         <i class="bi bi-calendar-x"></i>
                         <p>No hay actividades programadas para este día</p>
-                        <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
-                            <i class="bi bi-plus-circle"></i>
-                            Crear Nueva Actividad
-                        </button>
+                        @if (TipoFiltro != "grupo" || GrupoId == 0)
+                        {
+                            <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
+                                <i class="bi bi-plus-circle"></i>
+                                Crear Nueva Actividad
+                            </button>
+                        }
                     </div>
                 }
                 else
@@ -189,10 +192,13 @@
                         <div class="sin-actividades">
                             <i class="bi bi-calendar-x"></i>
                             <p>No hay actividades para este día</p>
-                            <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
-                                <i class="bi bi-plus-circle"></i>
-                                Crear Nueva Actividad
-                            </button>
+                            @if (TipoFiltro != "grupo" || GrupoId == 0)
+                            {
+                                <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Crear Nueva Actividad
+                                </button>
+                            }
                         </div>
                     }
                     else
@@ -241,12 +247,15 @@
                             </div>
                         }
                         </div>
-                        <div class="actividades-dia-acciones">
-                            <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
-                                <i class="bi bi-plus-circle"></i>
-                                Agregar Nueva Actividad
-                            </button>
-                        </div>
+                        @if (TipoFiltro != "grupo" || GrupoId == 0)
+                        {
+                            <div class="actividades-dia-acciones">
+                                <button class="btn-crear-actividad" @onclick="() => OnDiaClick(fechaActual)">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Agregar Nueva Actividad
+                                </button>
+                            </div>
+                        }
                     }
                 }
             </div>
@@ -1165,9 +1174,10 @@
 @code {
     [Parameter] public int IdAsignacionAcademica { get; set; }
     [Parameter] public int GrupoId { get; set; }
-    [Parameter] public string TipoFiltro { get; set; } = "materias"; // "materias" o "grupo"
+    [Parameter] public string TipoFiltro { get; set; } = "asignaturas"; // "asignaturas" o "grupo"
     [Parameter] public EventCallback<DateTime> OnDiaSeleccionado { get; set; }
     [Parameter] public EventCallback OnActividadGuardada { get; set; }
+    [Parameter] public EventCallback OnActividadEliminada { get; set; }
     [Parameter] public EventCallback<ActividadCalendarioDto> OnActividadSeleccionada { get; set; }
 
     private enum VistaCalendario
@@ -1210,10 +1220,22 @@
         await CargarCalendario();
     }
 
+    private int _idAsignacionAcademicaAnterior;
+    private int _grupoIdAnterior;
+    private string _tipoFiltroAnterior = "";
+
     protected override async Task OnParametersSetAsync()
     {
-        if (IdAsignacionAcademica > 0 || (TipoFiltro == "grupo" && GrupoId > 0))
+        // Solo recargar cuando cambian los parámetros de filtro (evita 4 recargas al guardar/editar)
+        bool filtrosCambiaron = _idAsignacionAcademicaAnterior != IdAsignacionAcademica
+            || _grupoIdAnterior != GrupoId
+            || _tipoFiltroAnterior != TipoFiltro;
+
+        if (filtrosCambiaron && (IdAsignacionAcademica > 0 || (TipoFiltro == "grupo" && GrupoId > 0)))
         {
+            _idAsignacionAcademicaAnterior = IdAsignacionAcademica;
+            _grupoIdAnterior = GrupoId;
+            _tipoFiltroAnterior = TipoFiltro ?? "";
             await CargarCalendario();
         }
     }
@@ -1707,6 +1729,20 @@
     {
         Console.WriteLine($"🖱️ CalendarioComponent - OnDiaClick: {fecha:yyyy-MM-dd}, Vista: {vistaActual}, HasDelegate = {OnDiaSeleccionado.HasDelegate}");
         
+        // Con filtro por grupo (todos los docentes): no se permite crear actividades, solo visualizar
+        if (TipoFiltro == "grupo" && GrupoId > 0)
+        {
+            await Swal.FireAsync(new SweetAlertOptions
+            {
+                Icon = SweetAlertIcon.Info,
+                Title = "Solo visualización",
+                Text = "En la vista por grupo (todos los docentes) solo se permite visualizar actividades. Para crear o editar, use la vista 'Mis Asignaturas'.",
+                ConfirmButtonText = "Entendido",
+                ConfirmButtonColor = "#006bb7"
+            });
+            return;
+        }
+        
         // Validar si la fecha es anterior a hoy
         if (fecha.Date < DateTime.Today)
         {
@@ -1800,6 +1836,16 @@
     /// </summary>
     private async Task OnActividadClick(ActividadCalendarioDto actividad)
     {
+        // Con filtro por grupo (todos los docentes): solo visualización, sin editar ni eliminar
+        if (TipoFiltro == "grupo" && GrupoId > 0)
+        {
+            if (OnActividadSeleccionada.HasDelegate)
+            {
+                await OnActividadSeleccionada.InvokeAsync(actividad);
+            }
+            return;
+        }
+
         // Obtener el UsuarioId del usuario actual
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var usuarioIdClaim = authState?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -1896,24 +1942,12 @@
                             ConfirmButtonColor = "#006bb7"
                         });
 
-                        // Recargar el calendario según la vista actual
-                        if (vistaActual == VistaCalendario.Dia)
+                        // Una sola recarga del calendario (mismo flujo que al guardar)
+                        await RecargarCalendario();
+                        if (OnActividadEliminada.HasDelegate)
                         {
-                            await CargarVistaDiaria();
+                            await OnActividadEliminada.InvokeAsync();
                         }
-                        else if (vistaActual == VistaCalendario.Semana)
-                        {
-                            await CargarVistaSemanal();
-                        }
-                        else if (vistaActual == VistaCalendario.Mes)
-                        {
-                            await CargarVistaMensual();
-                        }
-                        else
-                        {
-                            await CargarCalendario();
-                        }
-                        StateHasChanged();
                     }
                 }
                 catch (UnauthorizedAccessException ex)

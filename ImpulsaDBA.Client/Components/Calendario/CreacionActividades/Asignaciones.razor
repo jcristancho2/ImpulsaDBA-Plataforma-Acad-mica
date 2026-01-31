@@ -115,10 +115,7 @@
                     <div class="modal-footer">
                         @if (modoSoloLectura)
                         {
-                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cerrar</button>
-                            <button type="button" class="btn btn-primary" @onclick="HabilitarEdicion">
-                                <i class="bi bi-pencil"></i> Editar
-                            </button>
+                            @* Filtro por grupo: solo visualización, sin botones Cerrar ni Editar (se cierra con la X del header) *@
                         }
                         else
                         {
@@ -377,15 +374,13 @@
         {
             modoSoloLectura = ModoSoloLectura;
             
-            // Generar un ID único y estable para el editor solo si no existe
+            // ID estable por apertura: solo asignar si está vacío para evitar dos inits (dos barras del editor)
+            var activityId = ActividadEditar?.Id ?? 0;
             if (string.IsNullOrEmpty(editorId))
             {
-                var activityId = ActividadEditar?.Id ?? 0;
-                editorId = $"quill-editor-{IdAsignacionAcademica}-{TipoActividadId}-{activityId}-{GetHashCode()}";
+                editorId = $"quill-editor-{IdAsignacionAcademica}-{TipoActividadId}-{activityId}-{Guid.NewGuid():N}";
+                editorInitialized = false;
             }
-            
-            // Resetear flag de inicialización cuando cambian los parámetros importantes
-            editorInitialized = false;
             
             if (ActividadEditar != null)
             {
@@ -451,6 +446,8 @@
     {
         if (Mostrar && !string.IsNullOrEmpty(editorId) && !editorInitialized)
         {
+            // Marcar de inmediato para evitar doble inicialización (varias toolbars)
+            editorInitialized = true;
             try
             {
                 // Esperar un momento para que el DOM esté completamente listo
@@ -460,6 +457,7 @@
                 var quillAvailable = await JSRuntime.InvokeAsync<bool>("eval", "typeof Quill !== 'undefined'");
                 if (!quillAvailable)
                 {
+                    editorInitialized = false;
                     Console.WriteLine("QuillJS no está disponible. Asegúrate de incluir el script en index.html");
                     return;
                 }
@@ -478,6 +476,7 @@
                     
                     if (!elementExists)
                     {
+                        editorInitialized = false;
                         Console.WriteLine($"El elemento del editor con ID '{editorId}' aún no está disponible después del segundo intento");
                         return;
                     }
@@ -501,11 +500,11 @@
                 }
                 
                 await JSRuntime.InvokeVoidAsync("initQuillEditor", editorId, dotNetRef, contenidoEditor);
-                editorInitialized = true;
                 Console.WriteLine($"Editor Quill inicializado correctamente con ID: {editorId}");
             }
             catch (Exception ex)
             {
+                editorInitialized = false;
                 Console.WriteLine($"Error al inicializar Quill: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
             }
@@ -516,7 +515,7 @@
     public void OnEditorContentChanged(string editorId, string content)
     {
         contenidoEditor = content;
-        actividad.Descripcion = content;
+        // No asignar a actividad.Descripcion: la descripción es el textarea; el editor es Hipertexto
         StateHasChanged();
     }
 
@@ -638,11 +637,10 @@
 
             MensajeProcesos = esModoEdicion ? "Actualizando actividad..." : "Guardando actividad...";
             
-            // Obtener contenido del editor Quill antes de guardar
+            // Obtener contenido del editor Quill antes de guardar (solo contenidoEditor; Descripción sigue en actividad.Descripcion)
             try
             {
                 contenidoEditor = await JSRuntime.InvokeAsync<string>("getQuillContent", editorId);
-                actividad.Descripcion = contenidoEditor;
             }
             catch (Exception ex)
             {
@@ -773,7 +771,20 @@
 
     private async Task CerrarModal()
     {
-        // Limpiar el editor cuando se cierra el modal
+        // Destruir instancia de Quill antes de limpiar (evita toolbars duplicados al reabrir)
+        var idToDestroy = editorId;
+        if (!string.IsNullOrEmpty(idToDestroy))
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("destroyQuillEditor", idToDestroy);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al destruir Quill: {ex.Message}");
+            }
+        }
+        
         editorInitialized = false;
         editorId = "";
         

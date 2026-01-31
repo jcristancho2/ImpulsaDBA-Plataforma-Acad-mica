@@ -7,20 +7,10 @@ namespace ImpulsaDBA.Client.Services
     {
         private readonly HttpClient _httpClient;
 
-        // Paleta de colores pastel para asignar a las cards de asignaturas.
-        private static readonly string[] PastelColorVariables = new[]
-        {
-            "--color-pastel-sky-blue",
-            "--color-pastel-blue-green",
-            "--color-pastel-ocean",
-            "--color-pastel-teal",
-            "--color-pastel-verde",
-            "--color-pastel-salmon",
-            "--color-pastel-tulip",
-            "--color-pastel-amber",
-            "--color-pastel-mauve",
-            "--color-pastel-peach"
-        };
+        /// <summary>
+        /// Color hex por defecto cuando la API no devuelve color (no se usan variables CSS).
+        /// </summary>
+        private const string ColorHexDefault = "#e0e0e0";
 
         public AsignaturaService(HttpClient httpClient)
         {
@@ -35,11 +25,11 @@ namespace ImpulsaDBA.Client.Services
                 
                 if (asignaturas != null)
                 {
-                    // Asignar colores a las asignaturas
+                    // Fallback: si la API no devolvió color, usar color hex por defecto (no CSS)
                     foreach (var asignatura in asignaturas)
                     {
-                        var colorIndex = Math.Abs(asignatura.Id.GetHashCode()) % PastelColorVariables.Length;
-                        asignatura.ColorHex = $"var({PastelColorVariables[colorIndex]})";
+                        if (string.IsNullOrWhiteSpace(asignatura.ColorHex))
+                            asignatura.ColorHex = ColorHexDefault;
                     }
                 }
                 
