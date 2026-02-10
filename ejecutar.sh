@@ -21,10 +21,10 @@ check_port() {
     return 0
 }
 
-# Verificar puertos
+# Verificar puertos (HTTPS para PWA: API 7001, Cliente 7023)
 echo "🔍 Verificando puertos..."
-check_port 5001 && echo -e "${GREEN}✓${NC} Puerto 5001 (API HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5001 en uso"
-check_port 5079 && echo -e "${GREEN}✓${NC} Puerto 5079 (Cliente HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 5079 en uso"
+check_port 7001 && echo -e "${GREEN}✓${NC} Puerto 7001 (API HTTPS) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 7001 en uso"
+check_port 7023 && echo -e "${GREEN}✓${NC} Puerto 7023 (Cliente HTTPS / PWA) disponible" || echo -e "${YELLOW}⚠️${NC} Puerto 7023 en uso"
 echo ""
 
 # Verificar que los proyectos existan
@@ -38,29 +38,29 @@ if [ ! -d "ImpulsaDBA.Client" ]; then
     exit 1
 fi
 
-# Función para ejecutar el API
+# Función para ejecutar el API (HTTPS para CORS y PWA)
 run_api() {
-    echo -e "${BLUE}📡 Iniciando API Backend...${NC}"
+    echo -e "${BLUE}📡 Iniciando API Backend (HTTPS)...${NC}"
     cd ImpulsaDBA.API
-    dotnet run --launch-profile http &
+    dotnet run --launch-profile https &
     API_PID=$!
     cd ..
     echo -e "${GREEN}✓ API iniciado (PID: $API_PID)${NC}"
-    echo -e "   URL: https://localhost:5001"
-    echo -e "   Swagger: https://localhost:5001/swagger"
+    echo -e "   URL: https://localhost:7001"
+    echo -e "   Swagger: https://localhost:7001/swagger"
     echo ""
 }
 
-# Función para ejecutar el Cliente
+# Función para ejecutar el Cliente (HTTPS para PWA instalable)
 run_client() {
-    echo -e "${BLUE}🌐 Iniciando Cliente Blazor WebAssembly...${NC}"
+    echo -e "${BLUE}🌐 Iniciando Cliente Blazor WebAssembly (PWA en HTTPS)...${NC}"
     sleep 3  # Esperar un poco para que el API inicie
     cd ImpulsaDBA.Client
-    dotnet run --launch-profile http &
+    dotnet run --launch-profile https &
     CLIENT_PID=$!
     cd ..
     echo -e "${GREEN}✓ Cliente iniciado (PID: $CLIENT_PID)${NC}"
-    echo -e "   URL: https://localhost:5079"
+    echo -e "   URL: https://localhost:7023"
     echo ""
 }
 
@@ -80,7 +80,9 @@ cleanup() {
         kill $CLIENT_PID 2>/dev/null
         echo -e "${GREEN}✓ Cliente detenido${NC}"
     fi
-    # Limpiar procesos dotnet huérfanos en los puertos
+    # Limpiar procesos dotnet huérfanos en los puertos (HTTPS: 7001 API, 7023 Cliente)
+    lsof -ti:7001 | xargs kill -9 2>/dev/null
+    lsof -ti:7023 | xargs kill -9 2>/dev/null
     lsof -ti:5001 | xargs kill -9 2>/dev/null
     lsof -ti:5079 | xargs kill -9 2>/dev/null
     exit 0
@@ -97,7 +99,7 @@ echo -e "${GREEN}✅ Ambos proyectos están ejecutándose${NC}"
 echo ""
 echo "📝 Para detener, presiona Ctrl+C"
 echo ""
-echo "🌐 Abre tu navegador en: https://localhost:5079"
+echo "🌐 Abre tu navegador en: https://localhost:7023 (PWA instalable)"
 echo ""
 
 # Esperar indefinidamente

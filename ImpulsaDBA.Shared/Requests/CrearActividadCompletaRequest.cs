@@ -35,6 +35,9 @@ public class CrearActividadCompletaRequest
     
     // Hipertexto (descripción enriquecida para Asignaciones)
     public string? Hipertexto { get; set; }
+
+    /// <summary>Si es true, la actividad genera entregable (tab.archivo_entrega_estudiante, tab.nota_estudiante).</summary>
+    public bool GeneraEntregable { get; set; } = false;
 }
 
 public class VideoEngancheRequest
@@ -51,6 +54,8 @@ public class PreguntaProblematizadoraRequest
 
 public class ArchivoRequest
 {
+    /// <summary>Id en tab.archivo; si tiene valor y Datos es null, es un archivo existente que se mantiene.</summary>
+    public int? Id { get; set; }
     public string NombreOriginal { get; set; } = string.Empty;
     public string NombreUnico { get; set; } = string.Empty;
     public int TipoArchivoId { get; set; }

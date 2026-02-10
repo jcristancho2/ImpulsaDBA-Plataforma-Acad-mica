@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.IO;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
 using ImpulsaDBA.API.Domain.Entities;
 using ImpulsaDBA.API.Infrastructure.Database;
@@ -12,10 +15,242 @@ namespace ImpulsaDBA.API.Application.Services
     public class CalendarioService
     {
         private readonly ImpulsaDBA.API.Infrastructure.Database.DatabaseService _databaseService;
+        private readonly string _fileStorageRoot;
 
-        public CalendarioService(ImpulsaDBA.API.Infrastructure.Database.DatabaseService databaseService)
+        public CalendarioService(
+            ImpulsaDBA.API.Infrastructure.Database.DatabaseService databaseService,
+            IHostEnvironment env,
+            IConfiguration configuration)
         {
             _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
+
+            // Carpeta base donde se guardan los archivos. Se configura en appsettings.json → FileStorage:Root
+            // Si es ruta relativa (ej: "files"), se combina con ContentRootPath; si es absoluta, se usa tal cual.
+            var rootConfig = configuration["FileStorage:Root"]?.Trim();
+            if (!string.IsNullOrEmpty(rootConfig) && Path.IsPathRooted(rootConfig))
+                _fileStorageRoot = rootConfig;
+            else
+                _fileStorageRoot = Path.Combine(env.ContentRootPath, rootConfig ?? "files");
+        }
+
+        /// <summary>
+        /// Obtiene el código DANE del colegio asociado a una asignación académica.
+        /// (id_colegio está en bas.anio, se llega por grupo -> anio -> colegio)
+        /// </summary>
+        private async Task<string> ObtenerCodigoDanePorAsignacionAsync(int asignacionAcademicaId)
+        {
+            try
+            {
+                var query = @"
+                    SELECT TOP 1 C.codigo_dane
+                    FROM col.asignacion_academica AS AA
+                    INNER JOIN aca.grupo AS GR ON AA.id_grupo = GR.id
+                    INNER JOIN bas.anio AS A ON GR.id_anio = A.id
+                    INNER JOIN bas.colegio AS C ON A.id_colegio = C.id
+                    WHERE AA.id = @IdAsignacionAcademica";
+
+                var parameters = new Dictionary<string, object>
+                {
+                    { "@IdAsignacionAcademica", asignacionAcademicaId }
+                };
+
+                var result = await _databaseService.ExecuteScalarAsync(query, parameters);
+                return result?.ToString() ?? "SIN_DANE";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener código DANE por asignación: {ex.Message}");
+                return "SIN_DANE";
+            }
+        }
+
+        /// <summary>
+        /// Obtiene el código DANE del colegio asociado a un registro de asignacion_academica_recurso.
+        /// (id_colegio está en bas.anio, se llega por grupo -> anio -> colegio)
+        /// </summary>
+        private async Task<string> ObtenerCodigoDanePorRecursoAsync(int asignacionAcademicaRecursoId)
+        {
+            try
+            {
+                var query = @"
+                    SELECT TOP 1 C.codigo_dane
+                    FROM tab.asignacion_academica_recurso AS AAR
+                    INNER JOIN col.asignacion_academica AS AA ON AAR.id_asignacion_academica = AA.id
+                    INNER JOIN aca.grupo AS GR ON AA.id_grupo = GR.id
+                    INNER JOIN bas.anio AS A ON GR.id_anio = A.id
+                    INNER JOIN bas.colegio AS C ON A.id_colegio = C.id
+                    WHERE AAR.id = @IdAsignacionAcademicaRecurso";
+
+                var parameters = new Dictionary<string, object>
+                {
+                    { "@IdAsignacionAcademicaRecurso", asignacionAcademicaRecursoId }
+                };
+
+                var result = await _databaseService.ExecuteScalarAsync(query, parameters);
+                return result?.ToString() ?? "SIN_DANE";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener código DANE por recurso: {ex.Message}");
+                return "SIN_DANE";
+            }
+        }
+
+        /// <summary>
+        /// Elimina un archivo: borra el fichero en disco y los registros en tab.archivo_recurso y tab.archivo.
+        /// Desde ahora, en tab.archivo.file_name_unico se guarda la ruta completa en disco (fullPath).
+        /// Para registros antiguos (solo nombre o ruta relativa), se reconstruye el fullPath a partir del código DANE.
+        /// </summary>
+        private async Task EliminarArchivoAsync(int idArchivo)
+        {
+            try
+            {
+                var paramsArchivo = new Dictionary<string, object> { { "@IdArchivo", idArchivo } };
+                // Obtener file_name_unico y id de asignacion_academica_recurso para construir ruta (compatibilidad con registros antiguos)
+                var queryInfo = @"
+                    SELECT A.file_name_unico, AAR.id AS id_aar
+                    FROM tab.archivo A
+                    INNER JOIN tab.archivo_recurso AR ON AR.id_archivo = A.id
+                    INNER JOIN tab.asignacion_academica_recurso AAR ON AAR.id_recurso = AR.id_recurso
+                    WHERE A.id = @IdArchivo";
+                var resultInfo = await _databaseService.ExecuteQueryAsync(queryInfo, paramsArchivo);
+                if (resultInfo.Rows.Count > 0)
+                {
+                    var fileNameUnico = resultInfo.Rows[0]["file_name_unico"]?.ToString()?.Trim();
+                    var idAar = resultInfo.Rows[0]["id_aar"];
+                    if (!string.IsNullOrEmpty(fileNameUnico))
+                    {
+                        string fullPath;
+
+                        if (Path.IsPathRooted(fileNameUnico))
+                        {
+                            // Nuevo comportamiento: file_name_unico ya contiene el fullPath
+                            fullPath = fileNameUnico.Replace('\\', Path.DirectorySeparatorChar)
+                                                    .Replace('/', Path.DirectorySeparatorChar);
+                        }
+                        else
+                        {
+                            // Compatibilidad: nombre suelto o ruta relativa bajo _fileStorageRoot
+                            string rutaRelativa;
+                            if (fileNameUnico.Contains('/') || fileNameUnico.Contains('\\'))
+                            {
+                                rutaRelativa = fileNameUnico
+                                    .Replace('\\', Path.DirectorySeparatorChar)
+                                    .Replace('/', Path.DirectorySeparatorChar);
+                            }
+                            else
+                            {
+                                if (idAar == null || idAar == DBNull.Value)
+                                    return;
+
+                                var codigoDane = await ObtenerCodigoDanePorRecursoAsync(Convert.ToInt32(idAar));
+                                rutaRelativa = Path.Combine(codigoDane, fileNameUnico)
+                                    .Replace('\\', Path.DirectorySeparatorChar)
+                                    .Replace('/', Path.DirectorySeparatorChar);
+                            }
+
+                            fullPath = Path.GetFullPath(Path.Combine(_fileStorageRoot, rutaRelativa));
+                        }
+                        if (File.Exists(fullPath))
+                        {
+                            File.Delete(fullPath);
+                            Console.WriteLine($"✅ Archivo eliminado de disco: {fullPath}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"⚠️ Archivo no encontrado en disco (se eliminará de BD): {fullPath}");
+                        }
+                    }
+                }
+
+                var queryDeleteRecurso = "DELETE FROM tab.archivo_recurso WHERE id_archivo = @IdArchivo";
+                await _databaseService.ExecuteNonQueryAsync(queryDeleteRecurso, paramsArchivo);
+
+                var queryDeleteArchivo = "DELETE FROM tab.archivo WHERE id = @IdArchivo";
+                await _databaseService.ExecuteNonQueryAsync(queryDeleteArchivo, paramsArchivo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al eliminar archivo id={idArchivo}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Obtiene la ruta física y nombre original de un archivo para descarga.
+        /// Desde ahora, en tab.archivo.file_name_unico se guarda la ruta completa en disco (fullPath).
+        /// Para registros antiguos (solo nombre o ruta relativa), se reconstruye el fullPath a partir del código DANE.
+        /// </summary>
+        public async Task<(string? fullPath, string contentType, string fileName)> ObtenerArchivoParaDescargaAsync(int idArchivo)
+        {
+            var parameters = new Dictionary<string, object> { { "@IdArchivo", idArchivo } };
+            // Obtener file_name_original, file_name_unico y id asignacion_academica_recurso para construir ruta (compatibilidad con registros antiguos)
+            var query = @"
+                SELECT A.file_name_original, A.file_name_unico, AAR.id AS id_aar
+                FROM tab.archivo A
+                INNER JOIN tab.archivo_recurso AR ON AR.id_archivo = A.id
+                INNER JOIN tab.asignacion_academica_recurso AAR ON AAR.id_recurso = AR.id_recurso
+                WHERE A.id = @IdArchivo";
+            var result = await _databaseService.ExecuteQueryAsync(query, parameters);
+            if (result.Rows.Count == 0)
+                return (null!, "application/octet-stream", "");
+
+            var nombreOriginal = result.Rows[0]["file_name_original"]?.ToString() ?? "archivo";
+            var fileNameUnico = result.Rows[0]["file_name_unico"]?.ToString() ?? "";
+            var idAar = result.Rows[0]["id_aar"];
+            if (string.IsNullOrEmpty(fileNameUnico))
+                return (null!, "application/octet-stream", nombreOriginal);
+
+            string fullPath;
+            if (Path.IsPathRooted(fileNameUnico))
+            {
+                // Nuevo comportamiento: file_name_unico ya contiene el fullPath
+                fullPath = fileNameUnico.Replace('\\', Path.DirectorySeparatorChar)
+                                        .Replace('/', Path.DirectorySeparatorChar);
+            }
+            else
+            {
+                // Compatibilidad con registros antiguos: nombre suelto o ruta relativa
+                string rutaRelativa;
+                if (fileNameUnico.Contains('/') || fileNameUnico.Contains('\\'))
+                {
+                    rutaRelativa = fileNameUnico
+                        .Replace('\\', Path.DirectorySeparatorChar)
+                        .Replace('/', Path.DirectorySeparatorChar);
+                }
+                else
+                {
+                    if (idAar == null || idAar == DBNull.Value)
+                        return (null!, "application/octet-stream", nombreOriginal);
+
+                    var codigoDane = await ObtenerCodigoDanePorRecursoAsync(Convert.ToInt32(idAar));
+                    rutaRelativa = Path.Combine(codigoDane, fileNameUnico)
+                        .Replace('\\', Path.DirectorySeparatorChar)
+                        .Replace('/', Path.DirectorySeparatorChar);
+                }
+
+                fullPath = Path.Combine(_fileStorageRoot, rutaRelativa);
+            }
+            if (!File.Exists(fullPath))
+                return (null!, "application/octet-stream", nombreOriginal);
+
+            var ext = Path.GetExtension(nombreOriginal).ToLowerInvariant();
+            var contentType = ext switch
+            {
+                ".pdf"  => "application/pdf",
+                ".doc"  => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls"  => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".ppt"  => "application/vnd.ms-powerpoint",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png"  => "image/png",
+                ".gif"  => "image/gif",
+                ".bmp"  => "image/bmp",
+                ".webp" => "image/webp",
+                _ => "application/octet-stream"
+            };
+            return (fullPath, contentType, nombreOriginal);
         }
 
         /// <summary>
@@ -713,15 +948,16 @@ namespace ImpulsaDBA.API.Application.Services
                 Console.WriteLine($"📝 Creando actividad - Tipo: {request.TipoActividadId}, Título: {request.Titulo}, Fecha: {request.FechaPublicacion}");
                 
                 var queryRecurso = @"
-                    INSERT INTO tab.recurso (titulo, descripcion, id_tipo_recurso)
+                    INSERT INTO tab.recurso (titulo, descripcion, id_tipo_recurso, debe_entregar_archivo_estudiante)
                     OUTPUT INSERTED.id
-                    VALUES (@Titulo, @Descripcion, @IdTipoRecurso)";
+                    VALUES (@Titulo, @Descripcion, @IdTipoRecurso, @DebeEntregarArchivoEstudiante)";
 
                 var paramsRecurso = new Dictionary<string, object>
                 {
                     { "@Titulo", request.Titulo },
                     { "@Descripcion", request.Descripcion ?? string.Empty },
-                    { "@IdTipoRecurso", request.TipoActividadId }
+                    { "@IdTipoRecurso", request.TipoActividadId },
+                    { "@DebeEntregarArchivoEstudiante", request.GeneraEntregable }
                 };
 
                 var idRecurso = await _databaseService.ExecuteScalarAsync(queryRecurso, paramsRecurso);
@@ -798,40 +1034,66 @@ namespace ImpulsaDBA.API.Application.Services
                 // 6. Si tiene archivos (MaterialApoyo, Asignaciones)
                 if (request.Archivos != null && request.Archivos.Any())
                 {
+                    // Carpeta por colegio usando código DANE
+                    var codigoDane = await ObtenerCodigoDanePorAsignacionAsync(request.AsignacionAcademicaId);
+
                     foreach (var archivo in request.Archivos)
                     {
-                        // Insertar en tab.archivo
-                        var queryArchivo = @"
-                            INSERT INTO tab.archivo (file_name_origin, file_name_unico, id_tipo_archivo)
-                            OUTPUT INSERTED.id
-                            VALUES (@FileNameOrigin, @FileNameUnico, @IdTipoArchivo)";
-
-                        var paramsArchivo = new Dictionary<string, object>
+                        try
                         {
-                            { "@FileNameOrigin", archivo.NombreOriginal },
-                            { "@FileNameUnico", archivo.NombreUnico },
-                            { "@IdTipoArchivo", archivo.TipoArchivoId }
-                        };
+                            // 6.1 Guardar físicamente el archivo en files/<codigoDane>/<NombreOriginal>
+                            if (archivo.Datos != null && archivo.Datos.Length > 0)
+                            {
+                                var relativePath = Path.Combine(codigoDane, archivo.NombreOriginal);
+                                var fullPath = Path.GetFullPath(Path.Combine(_fileStorageRoot, relativePath));
 
-                        var idArchivo = await _databaseService.ExecuteScalarAsync(queryArchivo, paramsArchivo);
-                        if (idArchivo == null)
-                            continue; // Saltar este archivo si hay error
+                                var directory = Path.GetDirectoryName(fullPath);
+                                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                                {
+                                    Directory.CreateDirectory(directory);
+                                }
 
-                        int idArchivoInt = Convert.ToInt32(idArchivo);
+                                File.WriteAllBytes(fullPath, archivo.Datos);
 
-                        // Insertar en tab.archivo_recurso
-                        var queryArchivoRecurso = @"
+                                // 6.2 Insertar metadatos en tab.archivo (id, file_name_original, file_name_unico = fullPath, id_tipo_archivo)
+                                var queryArchivo = @"
+                            INSERT INTO tab.archivo (file_name_original, file_name_unico, id_tipo_archivo)
+                            OUTPUT INSERTED.id
+                            VALUES (@FileNameOriginal, @FileNameUnico, @IdTipoArchivo)";
+
+                                var paramsArchivo = new Dictionary<string, object>
+                                {
+                                    { "@FileNameOriginal", archivo.NombreOriginal },
+                                    // Guardamos el fullPath para que otras aplicaciones puedan localizar directamente el archivo
+                                    { "@FileNameUnico", fullPath.Replace('\\', '/') },
+                                    { "@IdTipoArchivo", archivo.TipoArchivoId }
+                                };
+
+                                var idArchivo = await _databaseService.ExecuteScalarAsync(queryArchivo, paramsArchivo);
+                                if (idArchivo == null)
+                                    continue; // Saltar este archivo si hay error
+
+                                int idArchivoInt = Convert.ToInt32(idArchivo);
+
+                                // 6.3 Relacionar archivo con el recurso
+                                var queryArchivoRecurso = @"
                             INSERT INTO tab.archivo_recurso (renderizable, id_archivo, id_recurso)
                             VALUES (@Renderizable, @IdArchivo, @IdRecurso)";
 
-                        var paramsArchivoRecurso = new Dictionary<string, object>
-                        {
-                            { "@Renderizable", archivo.Renderizable },
-                            { "@IdArchivo", idArchivoInt },
-                            { "@IdRecurso", idRecursoInt }
-                        };
+                                var paramsArchivoRecurso = new Dictionary<string, object>
+                                {
+                                    { "@Renderizable", archivo.Renderizable },
+                                    { "@IdArchivo", idArchivoInt },
+                                    { "@IdRecurso", idRecursoInt }
+                                };
 
-                        await _databaseService.ExecuteNonQueryAsync(queryArchivoRecurso, paramsArchivoRecurso);
+                                await _databaseService.ExecuteNonQueryAsync(queryArchivoRecurso, paramsArchivoRecurso);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error al guardar archivo '{archivo.NombreOriginal}': {ex.Message}");
+                        }
                     }
                 }
 
@@ -904,13 +1166,15 @@ namespace ImpulsaDBA.API.Application.Services
                 var queryActualizarRecurso = @"
                     UPDATE tab.recurso
                     SET titulo = @Titulo,
-                        descripcion = @Descripcion
+                        descripcion = @Descripcion,
+                        debe_entregar_archivo_estudiante = @DebeEntregarArchivoEstudiante
                     WHERE id = @IdRecurso";
 
                 var paramsActualizarRecurso = new Dictionary<string, object>
                 {
                     { "@Titulo", request.Titulo },
                     { "@Descripcion", request.Descripcion ?? string.Empty },
+                    { "@DebeEntregarArchivoEstudiante", request.GeneraEntregable },
                     { "@IdRecurso", idRecursoInt }
                 };
 
@@ -1015,47 +1279,72 @@ namespace ImpulsaDBA.API.Application.Services
                     }
                 }
 
-                // 5. Manejar archivos (por ahora solo actualizamos, no eliminamos los existentes)
-                // Nota: Para una actualización completa, se deberían eliminar archivos antiguos y agregar nuevos
-                // Por simplicidad, aquí solo agregamos nuevos archivos si se proporcionan
-                if (request.Archivos != null && request.Archivos.Any())
+                // 5.1 Eliminar archivos que el usuario quitó al editar (disco + BD)
+                if (request.ArchivosEliminados != null && request.ArchivosEliminados.Any())
                 {
-                    foreach (var archivo in request.Archivos)
+                    foreach (var idArchivo in request.ArchivosEliminados)
                     {
-                        // Insertar en tab.archivo
-                        var queryArchivo = @"
-                            INSERT INTO tab.archivo (file_name_origin, file_name_unico, id_tipo_archivo)
-                            OUTPUT INSERTED.id
-                            VALUES (@FileNameOrigin, @FileNameUnico, @IdTipoArchivo)";
+                        await EliminarArchivoAsync(idArchivo);
+                    }
+                    Console.WriteLine($"✅ Archivos eliminados: {request.ArchivosEliminados.Count}");
+                }
 
-                        var paramsArchivo = new Dictionary<string, object>
+                // 5.2 Agregar solo archivos nuevos (con Datos); los que tienen Id y no Datos se mantienen
+                var archivosNuevos = request.Archivos?.Where(a => a.Datos != null && a.Datos.Length > 0).ToList();
+                if (archivosNuevos != null && archivosNuevos.Any())
+                {
+                    var codigoDane = await ObtenerCodigoDanePorRecursoAsync(request.Id);
+
+                    foreach (var archivo in archivosNuevos)
+                    {
+                        try
                         {
-                            { "@FileNameOrigin", archivo.NombreOriginal },
-                            { "@FileNameUnico", archivo.NombreUnico },
-                            { "@IdTipoArchivo", archivo.TipoArchivoId }
-                        };
+                            var relativePath = Path.Combine(codigoDane, archivo.NombreOriginal);
+                            var fullPath = Path.GetFullPath(Path.Combine(_fileStorageRoot, relativePath));
 
-                        var idArchivo = await _databaseService.ExecuteScalarAsync(queryArchivo, paramsArchivo);
-                        if (idArchivo == null)
-                            continue; // Saltar este archivo si hay error
+                            var directory = Path.GetDirectoryName(fullPath);
+                            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                            {
+                                Directory.CreateDirectory(directory);
+                            }
 
-                        int idArchivoInt = Convert.ToInt32(idArchivo);
+                            if (archivo.Datos != null && archivo.Datos.Length > 0)
+                                File.WriteAllBytes(fullPath, archivo.Datos);
 
-                        // Insertar en tab.archivo_recurso
-                        var queryArchivoRecurso = @"
+                            var queryArchivo = @"
+                            INSERT INTO tab.archivo (file_name_original, file_name_unico, id_tipo_archivo)
+                            OUTPUT INSERTED.id
+                            VALUES (@FileNameOriginal, @FileNameUnico, @IdTipoArchivo)";
+
+                            var paramsArchivo = new Dictionary<string, object>
+                            {
+                                { "@FileNameOriginal", archivo.NombreOriginal },
+                                // Guardamos el fullPath para que otras aplicaciones puedan localizar directamente el archivo
+                                { "@FileNameUnico", fullPath.Replace('\\', '/') },
+                                { "@IdTipoArchivo", archivo.TipoArchivoId }
+                            };
+
+                            var idArchivo = await _databaseService.ExecuteScalarAsync(queryArchivo, paramsArchivo);
+                            if (idArchivo == null) continue;
+
+                            int idArchivoInt = Convert.ToInt32(idArchivo);
+                            var queryArchivoRecurso = @"
                             INSERT INTO tab.archivo_recurso (renderizable, id_archivo, id_recurso)
                             VALUES (@Renderizable, @IdArchivo, @IdRecurso)";
-
-                        var paramsArchivoRecurso = new Dictionary<string, object>
+                            var paramsArchivoRecurso = new Dictionary<string, object>
+                            {
+                                { "@Renderizable", archivo.Renderizable },
+                                { "@IdArchivo", idArchivoInt },
+                                { "@IdRecurso", idRecursoInt }
+                            };
+                            await _databaseService.ExecuteNonQueryAsync(queryArchivoRecurso, paramsArchivoRecurso);
+                        }
+                        catch (Exception ex)
                         {
-                            { "@Renderizable", archivo.Renderizable },
-                            { "@IdArchivo", idArchivoInt },
-                            { "@IdRecurso", idRecursoInt }
-                        };
-
-                        await _databaseService.ExecuteNonQueryAsync(queryArchivoRecurso, paramsArchivoRecurso);
+                            Console.WriteLine($"Error al guardar archivo '{archivo.NombreOriginal}' durante actualización: {ex.Message}");
+                        }
                     }
-                    Console.WriteLine($"✅ Archivos agregados");
+                    Console.WriteLine($"✅ Archivos nuevos agregados");
                 }
 
                 Console.WriteLine($"✅ Actividad actualizada exitosamente");
@@ -1084,7 +1373,8 @@ namespace ImpulsaDBA.API.Application.Services
                         AAR.visible,
                         AAR.fecha_calendario,
                         R.titulo,
-                        R.descripcion
+                        R.descripcion,
+                        R.debe_entregar_archivo_estudiante
                     FROM tab.asignacion_academica_recurso AS AAR
                     INNER JOIN tab.recurso AS R ON AAR.id_recurso = R.id
                     WHERE AAR.id = @Id";
@@ -1106,7 +1396,8 @@ namespace ImpulsaDBA.API.Application.Services
                     Titulo = row["titulo"]?.ToString() ?? string.Empty,
                     Descripcion = row["descripcion"]?.ToString(),
                     FechaPublicacion = row["fecha_calendario"] != DBNull.Value ? Convert.ToDateTime(row["fecha_calendario"]) : null,
-                    ActividadActiva = Convert.ToBoolean(row["visible"])
+                    ActividadActiva = Convert.ToBoolean(row["visible"]),
+                    GeneraEntregable = row["debe_entregar_archivo_estudiante"] != DBNull.Value && Convert.ToBoolean(row["debe_entregar_archivo_estudiante"])
                 };
 
                 // 2. Obtener hipertexto si existe
@@ -1152,15 +1443,12 @@ namespace ImpulsaDBA.API.Application.Services
                 // Por ahora, si el hipertexto contiene "?" múltiples veces, podría ser preguntas
                 // Esto se puede mejorar con un formato específico
 
-                // 5. Obtener archivos
+                // 5. Obtener archivos (tab.archivo: file_name_original, file_name_unico).
+                // Para registros nuevos, file_name_unico ya contiene el fullPath.
+                // Para registros antiguos, puede contener solo el nombre o una ruta relativa que se complementa con el código DANE.
                 var queryArchivos = @"
-                    SELECT 
-                        A.id,
-                        A.nombre_original,
-                        A.nombre_unico,
-                        A.id_tipo_archivo,
-                        A.ruta,
-                        AR.renderizable
+                    SELECT A.id, A.file_name_original AS nombre_original, A.file_name_unico AS nombre_unico,
+                           A.id_tipo_archivo, AR.renderizable
                     FROM tab.archivo_recurso AS AR
                     INNER JOIN tab.archivo AS A ON AR.id_archivo = A.id
                     WHERE AR.id_recurso = (SELECT id_recurso FROM tab.asignacion_academica_recurso WHERE id = @Id)
@@ -1169,24 +1457,48 @@ namespace ImpulsaDBA.API.Application.Services
                 try
                 {
                     var resultArchivos = await _databaseService.ExecuteQueryAsync(queryArchivos, paramsBasica);
+                    var codigoDane = await ObtenerCodigoDanePorRecursoAsync(idAsignacionAcademicaRecurso);
+
                     var archivos = new List<ImpulsaDBA.Shared.DTOs.ArchivoDto>();
-                    
                     foreach (DataRow archivoRow in resultArchivos.Rows)
                     {
+                        var nomOrig = archivoRow["nombre_original"]?.ToString() ?? string.Empty;
+                        var nomUnico = archivoRow["nombre_unico"]?.ToString() ?? string.Empty;
+                        if (string.IsNullOrEmpty(nomUnico))
+                            continue;
+
+                        // Normalizar path y extraer solo el nombre de archivo para mostrar
+                        var fullOrRelativePath = nomUnico.Replace('\\', '/');
+                        var fileNameOnly = Path.GetFileName(fullOrRelativePath);
+
+                        // Para compatibilidad: si nomUnico es solo nombre, construir una ruta relativa con el código DANE
+                        string rutaConstruida;
+                        if (Path.IsPathRooted(fullOrRelativePath) || fullOrRelativePath.Contains('/'))
+                        {
+                            // fullPath o ruta relativa ya armada
+                            rutaConstruida = fullOrRelativePath;
+                        }
+                        else
+                        {
+                            rutaConstruida = Path.Combine(codigoDane, fullOrRelativePath).Replace('\\', '/');
+                        }
+
                         archivos.Add(new ImpulsaDBA.Shared.DTOs.ArchivoDto
                         {
                             Id = Convert.ToInt32(archivoRow["id"]),
-                            NombreOriginal = archivoRow["nombre_original"]?.ToString() ?? string.Empty,
-                            NombreUnico = archivoRow["nombre_unico"]?.ToString() ?? string.Empty,
+                            NombreOriginal = string.IsNullOrEmpty(nomOrig) ? fileNameOnly : nomOrig,
+                            // NombreUnico se usa para mostrar en UI: solo el nombre del archivo, no la ruta completa
+                            NombreUnico = fileNameOnly,
                             TipoArchivoId = Convert.ToInt32(archivoRow["id_tipo_archivo"]),
-                            Ruta = archivoRow["ruta"]?.ToString() ?? string.Empty,
-                            Renderizable = Convert.ToBoolean(archivoRow["renderizable"])
+                            // Ruta contiene la ruta que se usará al reenviar el archivo al backend (fullPath o relativa)
+                            Ruta = rutaConstruida,
+                            Renderizable = archivoRow["renderizable"] != DBNull.Value && Convert.ToBoolean(archivoRow["renderizable"])
                         });
                     }
-                    
                     if (archivos.Any())
                     {
                         actividad.Archivos = archivos;
+                        Console.WriteLine($"✅ Archivos cargados para actividad: {archivos.Count}");
                     }
                 }
                 catch (Exception ex)
@@ -1260,18 +1572,17 @@ namespace ImpulsaDBA.API.Application.Services
                 int idRecursoInt = Convert.ToInt32(resultRecurso.Rows[0]["id_recurso"]);
                 Console.WriteLine($"✅ Recurso encontrado con ID: {idRecursoInt}");
 
-                // 2. Eliminar archivos asociados (tab.archivo_recurso y tab.archivo)
-                var queryEliminarArchivosRecurso = @"
-                    DELETE FROM tab.archivo_recurso
-                    WHERE id_recurso = @IdRecurso";
-
-                var paramsEliminarArchivos = new Dictionary<string, object>
+                // 2. Eliminar archivos: físico en disco + tab.archivo_recurso + tab.archivo
+                var queryIdsArchivo = "SELECT id_archivo FROM tab.archivo_recurso WHERE id_recurso = @IdRecurso";
+                var paramsEliminarArchivos = new Dictionary<string, object> { { "@IdRecurso", idRecursoInt } };
+                var resultIds = await _databaseService.ExecuteQueryAsync(queryIdsArchivo, paramsEliminarArchivos);
+                for (int i = 0; i < resultIds.Rows.Count; i++)
                 {
-                    { "@IdRecurso", idRecursoInt }
-                };
-
-                await _databaseService.ExecuteNonQueryAsync(queryEliminarArchivosRecurso, paramsEliminarArchivos);
-                Console.WriteLine($"✅ Archivos recurso eliminados");
+                    int idArchivo = Convert.ToInt32(resultIds.Rows[i]["id_archivo"]);
+                    await EliminarArchivoAsync(idArchivo);
+                }
+                if (resultIds.Rows.Count > 0)
+                    Console.WriteLine($"✅ Archivos eliminados (disco y BD): {resultIds.Rows.Count}");
 
                 // 3. Eliminar hipertexto asociado
                 var queryEliminarHipertexto = @"
@@ -1305,6 +1616,213 @@ namespace ImpulsaDBA.API.Application.Services
                 Console.WriteLine($"Error al eliminar actividad: {ex.Message}");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Mueve una actividad a otra fecha (solo actualiza fecha_calendario en tab.asignacion_academica_recurso).
+        /// </summary>
+        public async Task<bool> MoverActividadAsync(int idAsignacionAcademicaRecurso, DateTime nuevaFecha)
+        {
+            var query = @"
+                UPDATE tab.asignacion_academica_recurso
+                SET fecha_calendario = @NuevaFecha
+                WHERE id = @Id";
+            var parameters = new Dictionary<string, object>
+            {
+                { "@Id", idAsignacionAcademicaRecurso },
+                { "@NuevaFecha", nuevaFecha }
+            };
+            await _databaseService.ExecuteNonQueryAsync(query, parameters);
+            return true;
+        }
+
+        /// <summary>
+        /// Lista actividades del docente para una asignatura (para la pantalla de duplicar).
+        /// </summary>
+        public async Task<List<ActividadParaDuplicarDto>> ObtenerActividadesParaDuplicarAsync(int profesorId, int idAsignatura)
+        {
+            var query = @"
+                SELECT 
+                    AAR.id AS id,
+                    R.titulo AS titulo,
+                    AAR.fecha_calendario AS fecha_publicacion,
+                    AAR.id_asignacion_academica AS id_asignacion_academica,
+                    GR.id_grado AS id_grado,
+                    GR.nombre AS nombre_grupo,
+                    A.asignatura AS nombre_asignatura
+                FROM tab.asignacion_academica_recurso AS AAR
+                INNER JOIN tab.recurso AS R ON AAR.id_recurso = R.id
+                INNER JOIN col.asignacion_academica AS AA ON AAR.id_asignacion_academica = AA.id
+                INNER JOIN aca.grupo AS GR ON AA.id_grupo = GR.id
+                INNER JOIN col.asignatura AS A ON AA.id_asignatura = A.id
+                WHERE AA.id_profesor = @ProfesorId
+                  AND AA.id_asignatura = @IdAsignatura
+                ORDER BY AAR.fecha_calendario DESC, R.titulo";
+
+            var parameters = new Dictionary<string, object>
+            {
+                { "@ProfesorId", profesorId },
+                { "@IdAsignatura", idAsignatura }
+            };
+
+            var result = await _databaseService.ExecuteQueryAsync(query, parameters);
+            var list = new List<ActividadParaDuplicarDto>();
+            foreach (DataRow row in result.Rows)
+            {
+                list.Add(new ActividadParaDuplicarDto
+                {
+                    Id = Convert.ToInt32(row["id"]),
+                    Titulo = row["titulo"]?.ToString() ?? string.Empty,
+                    FechaPublicacion = row["fecha_publicacion"] != DBNull.Value ? Convert.ToDateTime(row["fecha_publicacion"]) : null,
+                    IdAsignacionAcademica = Convert.ToInt32(row["id_asignacion_academica"]),
+                    IdGrado = Convert.ToInt32(row["id_grado"]),
+                    NombreGrupo = row["nombre_grupo"]?.ToString() ?? string.Empty,
+                    NombreAsignatura = row["nombre_asignatura"]?.ToString() ?? string.Empty
+                });
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Obtiene otros cursos (grupos) con la misma asignatura para duplicar. Solo usa col.asignacion_academica y aca.grupo.
+        /// </summary>
+        public async Task<List<GrupoMismoGradoDto>> ObtenerGruposMismoGradoAsync(int idAsignacionAcademica, int profesorId)
+        {
+            Console.WriteLine($"🔁 Duplicar: idAsignacionAcademica={idAsignacionAcademica}, profesorId={profesorId}");
+            var queryOrigen = @"
+                SELECT id_asignatura, id_profesor
+                FROM col.asignacion_academica
+                WHERE id = @Id";
+            var dr = await _databaseService.ExecuteQueryAsync(queryOrigen, new Dictionary<string, object> { { "@Id", idAsignacionAcademica } });
+            if (dr.Rows.Count == 0)
+            {
+                Console.WriteLine($"⚠️ Duplicar: no se encontró asignación id={idAsignacionAcademica} en col.asignacion_academica (revisar BD o conexión)");
+                return new List<GrupoMismoGradoDto>();
+            }
+            int idAsignatura = Convert.ToInt32(dr.Rows[0]["id_asignatura"]);
+            int idProfesor = Convert.ToInt32(dr.Rows[0]["id_profesor"]);
+            Console.WriteLine($"🔁 Duplicar: id_asignatura={idAsignatura}, id_profesor={idProfesor}");
+
+            // aca.grupo: usar nombre_grupo desde GR.nombre o GR.grupo según exista
+            var queryDestinos = @"
+                SELECT 
+                    AA.id AS id_asignacion_academica,
+                    GR.id AS id_grupo,
+                    ISNULL(GR.nombre, GR.grupo) AS nombre_grupo
+                FROM col.asignacion_academica AS AA
+                INNER JOIN aca.grupo AS GR ON AA.id_grupo = GR.id
+                WHERE AA.id_asignatura = @IdAsignatura
+                  AND AA.id_profesor = @IdProfesor
+                  AND AA.id <> @IdAsignacionAcademica
+                ORDER BY ISNULL(GR.nombre, GR.grupo)";
+            var parameters = new Dictionary<string, object>
+            {
+                { "@IdAsignatura", idAsignatura },
+                { "@IdProfesor", idProfesor },
+                { "@IdAsignacionAcademica", idAsignacionAcademica }
+            };
+            DataTable result;
+            try
+            {
+                result = await _databaseService.ExecuteQueryAsync(queryDestinos, parameters);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Duplicar: error en query destinos: {ex.Message}");
+                throw;
+            }
+            var list = new List<GrupoMismoGradoDto>();
+            foreach (DataRow row in result.Rows)
+            {
+                list.Add(new GrupoMismoGradoDto
+                {
+                    IdAsignacionAcademica = Convert.ToInt32(row["id_asignacion_academica"]),
+                    IdGrupo = Convert.ToInt32(row["id_grupo"]),
+                    NombreGrupo = row["nombre_grupo"]?.ToString() ?? string.Empty
+                });
+            }
+            Console.WriteLine($"✅ Duplicar: {list.Count} destino(s) encontrado(s)");
+            return list;
+        }
+
+        /// <summary>
+        /// Duplica una actividad a los grupos destino con sus fechas/horas. Un solo recurso compartido por todos los destinos.
+        /// </summary>
+        public async Task<int> DuplicarActividadAsync(ImpulsaDBA.Shared.Requests.DuplicarActividadRequest request)
+        {
+            if (request?.Destinos == null || !request.Destinos.Any())
+                throw new ArgumentException("Debe indicar al menos un grupo destino.");
+
+            var actividad = await ObtenerActividadCompleta(request.IdAsignacionAcademicaRecursoOrigen);
+
+            // 1. Insertar nuevo recurso (copia)
+            var queryRecurso = @"
+                INSERT INTO tab.recurso (titulo, descripcion, id_tipo_recurso, debe_entregar_archivo_estudiante)
+                OUTPUT INSERTED.id
+                VALUES (@Titulo, @Descripcion, (SELECT TOP 1 id_tipo_recurso FROM tab.recurso WHERE id = (SELECT id_recurso FROM tab.asignacion_academica_recurso WHERE id = @IdOrigen)), @DebeEntregar)";
+
+            var idRecursoParam = await _databaseService.ExecuteScalarAsync(
+                "SELECT id_recurso FROM tab.asignacion_academica_recurso WHERE id = @IdOrigen",
+                new Dictionary<string, object> { { "@IdOrigen", request.IdAsignacionAcademicaRecursoOrigen } });
+            if (idRecursoParam == null)
+                throw new Exception("No se encontró la actividad origen.");
+            int idRecursoOrigen = Convert.ToInt32(idRecursoParam);
+
+            var paramsRecurso = new Dictionary<string, object>
+            {
+                { "@Titulo", actividad.Titulo },
+                { "@Descripcion", actividad.Descripcion ?? string.Empty },
+                { "@IdOrigen", request.IdAsignacionAcademicaRecursoOrigen },
+                { "@DebeEntregar", actividad.GeneraEntregable }
+            };
+            var idRecursoNuevoObj = await _databaseService.ExecuteScalarAsync(queryRecurso, paramsRecurso);
+            if (idRecursoNuevoObj == null)
+                throw new Exception("Error al crear el recurso duplicado.");
+            int idRecursoNuevo = Convert.ToInt32(idRecursoNuevoObj);
+
+            // 2. Copiar hipertexto
+            var queryHipertexto = @"
+                INSERT INTO tab.hipertexto_recurso (hipertexto, id_recurso)
+                SELECT hipertexto, @IdRecursoNuevo
+                FROM tab.hipertexto_recurso
+                WHERE id_recurso = @IdRecursoOrigen";
+            await _databaseService.ExecuteNonQueryAsync(queryHipertexto, new Dictionary<string, object>
+            {
+                { "@IdRecursoNuevo", idRecursoNuevo },
+                { "@IdRecursoOrigen", idRecursoOrigen }
+            });
+
+            // 3. Copiar archivo_recurso (mismo id_archivo, nuevo id_recurso)
+            var queryArchivoRecurso = @"
+                INSERT INTO tab.archivo_recurso (renderizable, id_archivo, id_recurso)
+                SELECT renderizable, id_archivo, @IdRecursoNuevo
+                FROM tab.archivo_recurso
+                WHERE id_recurso = @IdRecursoOrigen";
+            await _databaseService.ExecuteNonQueryAsync(queryArchivoRecurso, new Dictionary<string, object>
+            {
+                { "@IdRecursoNuevo", idRecursoNuevo },
+                { "@IdRecursoOrigen", idRecursoOrigen }
+            });
+
+            // 4. Una fila en asignacion_academica_recurso por destino (fecha_calendario = Fecha + Hora)
+            foreach (var d in request.Destinos)
+            {
+                if (!TimeSpan.TryParse(d.Hora, out var hora))
+                    hora = TimeSpan.Zero;
+                var fechaCalendario = d.Fecha.Date.Add(hora);
+
+                var queryAAR = @"
+                    INSERT INTO tab.asignacion_academica_recurso (presencial, visible, fecha_calendario, fecha_creacion_registro, id_asignacion_academica, id_recurso)
+                    VALUES (0, 1, @FechaCalendario, GETDATE(), @IdAsignacionAcademica, @IdRecurso)";
+                await _databaseService.ExecuteNonQueryAsync(queryAAR, new Dictionary<string, object>
+                {
+                    { "@FechaCalendario", fechaCalendario },
+                    { "@IdAsignacionAcademica", d.IdAsignacionAcademica },
+                    { "@IdRecurso", idRecursoNuevo }
+                });
+            }
+
+            return idRecursoNuevo;
         }
     }
 }

@@ -75,3 +75,4 @@
 /Users/raucrow/Work/ImpulsaDBA-Plataforma-Acad-mica/ImpulsaDBA.API/bin/Debug/net8.0/ImpulsaDBA.Shared.dll
 /Users/raucrow/Work/ImpulsaDBA-Plataforma-Acad-mica/ImpulsaDBA.API/bin/Debug/net8.0/ImpulsaDBA.Shared.pdb
 /Users/raucrow/Work/ImpulsaDBA-Plataforma-Acad-mica/ImpulsaDBA.API/bin/Debug/net8.0/BCrypt.Net-Next.dll
+/Users/raucrow/Work/ImpulsaDBA-Plataforma-Acad-mica/ImpulsaDBA.API/bin/Debug/net8.0/appsettings.Production.json

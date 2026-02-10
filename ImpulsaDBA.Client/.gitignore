@@ -12,6 +12,7 @@
 # Build results
 bin/
 obj/
+publish/
 /packages/
 *.nupkg
 

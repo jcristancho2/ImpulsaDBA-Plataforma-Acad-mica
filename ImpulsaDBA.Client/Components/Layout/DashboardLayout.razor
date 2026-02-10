@@ -35,6 +35,10 @@
                 <i class="bi bi-calendar3 nav-icon"></i>
                 <span class="nav-text">Calendario</span>
             </button>
+            <button class="nav-item @GetVistaActiveClass("duplicar")" @onclick="@(() => MostrarVista("duplicar"))">
+                <i class="bi bi-copy nav-icon"></i>
+                <span class="nav-text">Duplicar actividades</span>
+            </button>
         </nav>
         
         <div class="sidebar-footer">
@@ -101,6 +105,8 @@
             vistaActual = "asignaturas";
         else if (path.Contains("/calendario"))
             vistaActual = "calendario";
+        else if (path.Contains("/duplicar-actividades"))
+            vistaActual = "duplicar";
     }
 
     protected override async Task OnInitializedAsync()
@@ -168,6 +174,7 @@
             "inicio" => "/dashboard/inicio",
             "asignaturas" => "/dashboard/asignaturas",
             "calendario" => "/dashboard/calendario",
+            "duplicar" => "/dashboard/duplicar-actividades",
             _ => "/dashboard/inicio"
         };
         

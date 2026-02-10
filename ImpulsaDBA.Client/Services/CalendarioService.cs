@@ -169,6 +169,15 @@ namespace ImpulsaDBA.Client.Services
             }
         }
 
+        /// <summary>
+        /// Devuelve la URL para descargar/abrir un archivo guardado (por id de tab.archivo).
+        /// </summary>
+        public string GetUrlDescargaArchivo(int idArchivo)
+        {
+            var baseUrl = _httpClient.BaseAddress?.ToString()?.TrimEnd('/') ?? "";
+            return $"{baseUrl}/api/calendario/archivo/{idArchivo}";
+        }
+
         public async Task<bool> EliminarActividad(int idAsignacionAcademicaRecurso, int usuarioId)
         {
             try
@@ -203,6 +212,61 @@ namespace ImpulsaDBA.Client.Services
             {
                 Console.WriteLine($"Error al eliminar actividad: {ex.Message}");
                 throw;
+            }
+        }
+
+        public async Task<List<ActividadParaDuplicarDto>> ObtenerActividadesParaDuplicarAsync(int profesorId, int idAsignatura)
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<ActividadParaDuplicarDto>>(
+                    $"api/calendario/duplicar/actividades?profesorId={profesorId}&idAsignatura={idAsignatura}");
+                return list ?? new List<ActividadParaDuplicarDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener actividades para duplicar: {ex.Message}");
+                return new List<ActividadParaDuplicarDto>();
+            }
+        }
+
+        public async Task<List<GrupoMismoGradoDto>> ObtenerGruposMismoGradoAsync(int idAsignacionAcademica, int profesorId)
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<GrupoMismoGradoDto>>(
+                    $"api/calendario/duplicar/grupos-mismo-grado?idAsignacionAcademica={idAsignacionAcademica}&profesorId={profesorId}");
+                return list ?? new List<GrupoMismoGradoDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener grupos mismo grado: {ex.Message}");
+                return new List<GrupoMismoGradoDto>();
+            }
+        }
+
+        public async Task MoverActividadAsync(int idAsignacionAcademicaRecurso, DateTime nuevaFecha)
+        {
+            var url = $"api/calendario/mover/{idAsignacionAcademicaRecurso}?nuevaFecha={nuevaFecha:yyyy-MM-ddTHH:mm:ss}";
+            var response = await _httpClient.PutAsync(url, null);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error al mover actividad: {errorContent}");
+                throw new Exception("Error al mover la actividad.");
+            }
+        }
+
+        public async Task DuplicarActividadAsync(DuplicarActividadRequest request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/calendario/duplicar", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error al duplicar actividad: {errorContent}");
+                throw new Exception(response.StatusCode == System.Net.HttpStatusCode.BadRequest
+                    ? (System.Text.Json.JsonDocument.Parse(errorContent).RootElement.TryGetProperty("error", out var err) ? err.GetString() : "Solicitud incorrecta")
+                    : "Error al duplicar la actividad.");
             }
         }
     }

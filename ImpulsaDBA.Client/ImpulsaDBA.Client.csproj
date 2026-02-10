@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <!-- RuntimeIdentifier para que dotnet restore descargue el runtime browser-wasm (evita NETSDK1112 con SDK 10) -->
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <!-- Excluir carpeta publish para evitar BLAZOR106: el SDK no debe escanear wwwroot dentro de publish -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +25,9 @@
 
   <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+    <!-- Evitar que la carpeta publish sea incluida en el análisis del compilador Blazor -->
+    <Content Remove="publish\**\*" />
+    <None Remove="publish\**\*" />
   </ItemGroup>
 
   <ItemGroup>

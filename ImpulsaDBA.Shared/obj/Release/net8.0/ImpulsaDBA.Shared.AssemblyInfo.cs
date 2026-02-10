@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ImpulsaDBA.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+911da0b44d549354a705f917079994a9f1fde540")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bb7921ccc02546d813e933237563d6a1e9afe0bf")]
 [assembly: System.Reflection.AssemblyProductAttribute("ImpulsaDBA.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ImpulsaDBA.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

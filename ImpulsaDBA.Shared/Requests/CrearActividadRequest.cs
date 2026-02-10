@@ -18,6 +18,9 @@ public class CrearActividadRequest
     
     public string? Link { get; set; }
     public string? Tiempo { get; set; }
+
+    /// <summary>Si es true, la actividad genera entregable (tab.archivo_entrega_estudiante, tab.nota_estudiante).</summary>
+    public bool GeneraEntregable { get; set; } = false;
     
     public int TipoActividadId { get; set; }
     public int AsignacionAcademicaId { get; set; }

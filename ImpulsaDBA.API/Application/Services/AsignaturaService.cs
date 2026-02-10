@@ -256,17 +256,17 @@ namespace ImpulsaDBA.API.Application.Services
                     pendientes += Convert.ToInt32(row["pendientes"] ?? 0);
                 }
 
-                // Procesar estadísticas de tab.recurso - con manejo de errores
+                // Procesar estadísticas de tab.recurso - con manejo de errores y DBNull
                 try
                 {
                     var resultRecursos = await _databaseService.ExecuteQueryAsync(queryRecursos, parameters);
                     if (resultRecursos.Rows.Count > 0)
                     {
                         var row = resultRecursos.Rows[0];
-                        totales += Convert.ToInt32(row["totales"] ?? 0);
-                        activas += Convert.ToInt32(row["activas"] ?? 0);
-                        inactivas += Convert.ToInt32(row["inactivas"] ?? 0);
-                        pendientes += Convert.ToInt32(row["pendientes"] ?? 0);
+                        totales += row["totales"] == DBNull.Value || row["totales"] == null ? 0 : Convert.ToInt32(row["totales"]);
+                        activas += row["activas"] == DBNull.Value || row["activas"] == null ? 0 : Convert.ToInt32(row["activas"]);
+                        inactivas += row["inactivas"] == DBNull.Value || row["inactivas"] == null ? 0 : Convert.ToInt32(row["inactivas"]);
+                        pendientes += row["pendientes"] == DBNull.Value || row["pendientes"] == null ? 0 : Convert.ToInt32(row["pendientes"]);
                     }
                 }
                 catch (Exception exRecursos)

@@ -28,9 +28,15 @@ public class ActualizarActividadRequest
     
     // Para archivos (MaterialApoyo, Asignaciones)
     public List<ArchivoRequest>? Archivos { get; set; }
+
+    // IDs de archivos (tab.archivo) que el usuario eliminó al editar; se borran en BD y en disco
+    public List<int>? ArchivosEliminados { get; set; }
     
     // Hipertexto (descripción enriquecida para Asignaciones)
     public string? Hipertexto { get; set; }
+
+    /// <summary>Si es true, la actividad genera entregable.</summary>
+    public bool GeneraEntregable { get; set; } = false;
     
     // ID del usuario/profesor que está intentando actualizar (para validación)
     public int UsuarioId { get; set; }

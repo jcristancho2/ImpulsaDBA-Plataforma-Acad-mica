@@ -1,0 +1,368 @@
+@page "/dashboard/duplicar-actividades"
+@layout DashboardLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using ImpulsaDBA.Shared.DTOs
+@using ImpulsaDBA.Shared.Requests
+@using ImpulsaDBA.Client.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject AsignaturaService AsignaturaService
+@inject CalendarioService CalendarioService
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Duplicar actividades - ImpulsaDBA</PageTitle>
+
+<div class="duplicar-page">
+    <div class="page-header">
+        <h1>Duplicar actividades</h1>
+        <p class="subtitle">Elija una asignatura y luego una actividad para duplicarla a otros cursos con la misma asignatura.</p>
+    </div>
+
+    <div class="filtro-asignatura mb-4">
+        <label for="select-asignatura" class="form-label">Asignatura</label>
+        <select id="select-asignatura" class="form-select" @onchange="OnAsignaturaChange">
+            <option value="0">Seleccione una asignatura</option>
+            @foreach (var a in asignaturasFiltradas)
+            {
+                <option value="@a.IdAsignacionAcademica" selected="@(idAsignacionAcademicaSeleccionada == a.IdAsignacionAcademica)">@TextoOpcionAsignatura(a)</option>
+            }
+        </select>
+    </div>
+
+    @if (cargandoActividades)
+    {
+        <p>Cargando actividades...</p>
+    }
+    else if (actividadesParaDuplicar.Count == 0 && idAsignaturaSeleccionada > 0)
+    {
+        <p class="text-muted">No hay actividades creadas para esta asignatura.</p>
+    }
+    else if (actividadesParaDuplicar.Count > 0)
+    {
+        <div class="actividades-list">
+            <h3 class="mb-3">Actividades creadas</h3>
+            <p class="text-muted small">Haga clic en una actividad para duplicarla a otros cursos con la misma asignatura.</p>
+            <div class="actividad-cards">
+                @foreach (var act in actividadesParaDuplicar)
+                {
+                    <div class="actividad-card @(actividadSeleccionada?.Id == act.Id ? "selected" : "")"
+                         @onclick="() => AbrirModalDestinos(act)">
+                        <div class="actividad-card-body">
+                            <strong>@act.Titulo</strong>
+                            <div class="actividad-meta">
+                                @if (act.FechaPublicacion.HasValue)
+                                {
+                                    <span>@act.FechaPublicacion.Value.ToString("dd/MM/yyyy")</span>
+                                }
+                                <span>@act.NombreGrupo</span>
+                            </div>
+                        </div>
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (mostrarMensaje)
+    {
+        <div class="alert @(mensajeExito ? "alert-success" : "alert-danger") alert-dismissible fade show mt-3" role="alert">
+            @mensajeTexto
+            <button type="button" class="btn-close" @onclick="CerrarMensaje" aria-label="Cerrar"></button>
+        </div>
+    }
+</div>
+
+@* Modal: destinos (otros cursos con la misma asignatura) con fecha y hora *@
+@if (mostrarModalDestinos && actividadSeleccionada != null)
+{
+    <div class="modal-overlay" @onclick="CerrarModalDestinos">
+        <div class="modal-container modal-large" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Duplicar: @actividadSeleccionada.Titulo</h3>
+                <button type="button" class="btn-close" @onclick="CerrarModalDestinos" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                @if (cargandoGrupos)
+                {
+                    <p>Cargando cursos...</p>
+                }
+                else if (destinosConFecha.Count == 0)
+                {
+                    <div class="alert alert-info mb-0">
+                        <strong>No hay otros cursos con esta asignatura.</strong><br />
+                        Para esta asignatura usted solo tiene <strong>un grupo</strong> asignado, por eso no hay destinos disponibles. Para duplicar actividades, en el desplegable de arriba elija una asignatura en la que tenga <strong>varios grupos</strong> (por ejemplo <em>Ciencias Naturales y Educación Ambiental</em> con Quinto 0502, 0503 y Segundo 0202); allí sí podrá elegir a qué otros cursos enviar la copia.
+                    </div>
+                }
+                else
+                {
+                    @* Paso 1: Selección de grupos *@
+                    <div class="modal-seccion">
+                        <h4 class="seccion-titulo">¿A qué grupos desea duplicar la actividad?</h4>
+                        <p class="text-muted small mb-2">Seleccione los cursos que usted tiene asignados con esta asignatura a los que enviará la actividad.</p>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 3rem;">Duplicar</th>
+                                        <th>Curso</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in destinosConFecha)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input" @bind="d.Seleccionado" />
+                                            </td>
+                                            <td>@d.NombreGrupo</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    @* Paso 2: Fecha y hora (solo visible cuando hay grupos seleccionados) *@
+                    @if (destinosConFecha.Any(x => x.Seleccionado))
+                    {
+                        <div class="modal-seccion modal-seccion-destacada">
+                            <h4 class="seccion-titulo">Asigne fecha y hora a cada curso</h4>
+                            <p class="text-muted small mb-2">Indique la fecha de publicación y la hora para cada curso seleccionado.</p>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Curso</th>
+                                            <th>Fecha</th>
+                                            <th>Hora</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var d in destinosConFecha.Where(x => x.Seleccionado))
+                                        {
+                                            <tr>
+                                                <td>@d.NombreGrupo</td>
+                                                <td>
+                                                    <input type="date" class="form-control form-control-sm" @bind="d.Fecha" />
+                                                </td>
+                                                <td>
+                                                    <input type="time" class="form-control form-control-sm" value="@d.Hora" @onchange="@( (ChangeEventArgs e) => d.Hora = (e.Value as string) ?? "08:00" )" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="modal-footer mt-3">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarModalDestinos">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="EjecutarDuplicar" disabled="@(duplicando || !destinosConFecha.Any(x => x.Seleccionado))">
+                            @if (duplicando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Duplicar a los cursos seleccionados
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .duplicar-page { max-width: 900px; margin: 0 auto; padding: 2rem; }
+    .page-header { margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .subtitle { color: #6c757d; font-size: 0.95rem; }
+    .actividad-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+    .actividad-card {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1rem; border: 1px solid #dee2e6; border-radius: 8px;
+        cursor: pointer; transition: background 0.2s, border-color 0.2s;
+    }
+    .actividad-card:hover { background: #f8f9fa; border-color: #0d6efd; }
+    .actividad-card.selected { background: #e7f1ff; border-color: #0d6efd; }
+    .actividad-card-body { flex: 1; }
+    .actividad-meta { font-size: 0.85rem; color: #6c757d; margin-top: 0.25rem; }
+    .actividad-meta span { margin-right: 1rem; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1050; }
+    .modal-container { background: #fff; border-radius: 8px; max-width: 700px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .modal-large { max-width: 800px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #dee2e6; }
+    .modal-header h3 { margin: 0; font-size: 1.25rem; }
+    .modal-body { padding: 1.25rem; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .modal-seccion { margin-bottom: 1.5rem; }
+    .modal-seccion:last-of-type { margin-bottom: 0; }
+    .seccion-titulo { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #212529; }
+    .modal-seccion-destacada { padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; }
+</style>
+
+@code {
+    private List<AsignaturaDto> asignaturasFiltradas = new();
+    private int idAsignacionAcademicaSeleccionada;
+    private int idAsignaturaSeleccionada;
+    private List<ActividadParaDuplicarDto> actividadesParaDuplicar = new();
+    private bool cargandoActividades;
+    private ActividadParaDuplicarDto? actividadSeleccionada;
+    private bool mostrarModalDestinos;
+    private List<DestinoConFecha> destinosConFecha = new();
+    private bool cargandoGrupos;
+    private bool duplicando;
+    private bool mostrarMensaje;
+    private bool mensajeExito;
+    private string mensajeTexto = "";
+
+    private class DestinoConFecha
+    {
+        public int IdAsignacionAcademica { get; set; }
+        public string NombreGrupo { get; set; } = "";
+        public bool Seleccionado { get; set; }
+        public DateTime Fecha { get; set; } = DateTime.Today.AddDays(1);
+        public string Hora { get; set; } = "08:00";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = auth?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int profesorId))
+            return;
+        asignaturasFiltradas = await AsignaturaService.ObtenerAsignaturasPorProfesor(profesorId);
+        await base.OnInitializedAsync();
+    }
+
+    private static string TextoOpcionAsignatura(AsignaturaDto a)
+    {
+        var partes = new List<string> { a.Nombre };
+        if (!string.IsNullOrWhiteSpace(a.Grado)) partes.Add(a.Grado);
+        if (!string.IsNullOrWhiteSpace(a.Grupo)) partes.Add(a.Grupo);
+        return string.Join(" - ", partes);
+    }
+
+    private async Task OnAsignaturaChange(ChangeEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.Value?.ToString()) || !int.TryParse(e.Value.ToString(), out int idAsigAcad))
+        {
+            idAsignacionAcademicaSeleccionada = 0;
+            idAsignaturaSeleccionada = 0;
+            actividadesParaDuplicar = new List<ActividadParaDuplicarDto>();
+            return;
+        }
+        idAsignacionAcademicaSeleccionada = idAsigAcad;
+        var selected = asignaturasFiltradas.FirstOrDefault(x => x.IdAsignacionAcademica == idAsigAcad);
+        idAsignaturaSeleccionada = selected?.Id ?? 0;
+        await CargarActividades();
+    }
+
+    private async Task CargarActividades()
+    {
+        if (idAsignaturaSeleccionada <= 0) return;
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = auth?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int profesorId))
+        {
+            actividadesParaDuplicar = new List<ActividadParaDuplicarDto>();
+            return;
+        }
+        cargandoActividades = true;
+        StateHasChanged();
+        try
+        {
+            actividadesParaDuplicar = await CalendarioService.ObtenerActividadesParaDuplicarAsync(profesorId, idAsignaturaSeleccionada);
+        }
+        finally
+        {
+            cargandoActividades = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AbrirModalDestinos(ActividadParaDuplicarDto act)
+    {
+        actividadSeleccionada = act;
+        mostrarModalDestinos = true;
+        destinosConFecha = new List<DestinoConFecha>();
+        cargandoGrupos = true;
+        StateHasChanged();
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userId = auth?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int profesorId))
+            {
+                destinosConFecha = new List<DestinoConFecha>();
+                return;
+            }
+            var grupos = await CalendarioService.ObtenerGruposMismoGradoAsync(act.IdAsignacionAcademica, profesorId);
+            destinosConFecha = grupos.Select(g => new DestinoConFecha
+            {
+                IdAsignacionAcademica = g.IdAsignacionAcademica,
+                NombreGrupo = g.NombreGrupo,
+                Seleccionado = false,
+                Fecha = DateTime.Today.AddDays(1),
+                Hora = "08:00"
+            }).ToList();
+        }
+        finally
+        {
+            cargandoGrupos = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarModalDestinos()
+    {
+        mostrarModalDestinos = false;
+        actividadSeleccionada = null;
+        destinosConFecha = new List<DestinoConFecha>();
+        StateHasChanged();
+    }
+
+    private async Task EjecutarDuplicar()
+    {
+        if (actividadSeleccionada == null) return;
+        var seleccionados = destinosConFecha.Where(x => x.Seleccionado).ToList();
+        if (seleccionados.Count == 0) return;
+
+        duplicando = true;
+        StateHasChanged();
+        try
+        {
+            var request = new DuplicarActividadRequest
+            {
+                IdAsignacionAcademicaRecursoOrigen = actividadSeleccionada.Id,
+                Destinos = seleccionados.Select(d => new DestinoDuplicadoDto
+                {
+                    IdAsignacionAcademica = d.IdAsignacionAcademica,
+                    Fecha = d.Fecha,
+                    Hora = d.Hora
+                }).ToList()
+            };
+            await CalendarioService.DuplicarActividadAsync(request);
+            mensajeTexto = "Actividad duplicada correctamente a los cursos seleccionados.";
+            mensajeExito = true;
+            mostrarMensaje = true;
+            CerrarModalDestinos();
+            await CargarActividades();
+        }
+        catch (Exception ex)
+        {
+            mensajeTexto = ex.Message;
+            mensajeExito = false;
+            mostrarMensaje = true;
+        }
+        finally
+        {
+            duplicando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarMensaje()
+    {
+        mostrarMensaje = false;
+        StateHasChanged();
+    }
+}

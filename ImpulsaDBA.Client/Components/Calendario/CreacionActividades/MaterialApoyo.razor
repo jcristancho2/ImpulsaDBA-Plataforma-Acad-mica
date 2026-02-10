@@ -70,7 +70,7 @@
                     {
                         <div class="mb-3">
                             <InputFile id="SubirArchivos" OnChange="HandleSelectedFiles" Multiple style="display: none;" 
-                                       accept=".pdf,.ppt,.pptx,.doc,.docx" />
+                                       accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" />
                             <button type="button" onclick="document.getElementById('SubirArchivos').click()" 
                                     class="btn btn-primary">
                                 <i class="bi bi-arrow-bar-up"></i> Subir archivo
@@ -82,7 +82,18 @@
                         @foreach (var archivo in ListArchivos)
                         {
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>@archivo.Nombre</span> - <span>@archivo.Tipo</span>
+                                <span>
+                                    @if (archivo.EsExistente && archivo.Id > 0)
+                                    {
+                                        <a href="@CalendarioService.GetUrlDescargaArchivo(archivo.Id)" target="_blank" rel="noopener noreferrer" class="text-primary">
+                                            <i class="bi bi-download"></i> @archivo.Nombre
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        @archivo.Nombre
+                                    }
+                                </span>
                                 @if (!modoSoloLectura)
                                 {
                                     <button type="button" class="btn btn-danger btn-sm" 
@@ -273,6 +284,7 @@
 
     private CrearActividadRequest actividad = new();
     private List<ArchivoCargado> ListArchivos = new();
+    private List<int> _idsArchivosExistentesAlAbrir = new();
     private string MensajeProcesos = "";
     private string TituloModal = "";
     private bool esModoEdicion => ActividadEditar != null;
@@ -299,19 +311,26 @@
                         ActividadActiva = actividadCompleta.ActividadActiva
                     };
                     
-                    // Cargar archivos (nota: los archivos existentes se mostrarán pero no se pueden descargar sin implementar endpoint)
-                    // Por ahora, solo mostramos los archivos nuevos que se agreguen
-                    ListArchivos = new();
+                    // Cargar archivos existentes para mostrarlos y permitir descarga o eliminarlos al guardar
+                    _idsArchivosExistentesAlAbrir = actividadCompleta.Archivos?.Select(a => a.Id).ToList() ?? new();
+                    ListArchivos = actividadCompleta.Archivos?.Select(a => new ArchivoCargado
+                    {
+                        Id = a.Id,
+                        Nombre = a.NombreOriginal,
+                        Tipo = a.TipoArchivoId,
+                        Ruta = a.Ruta,
+                        EsExistente = true
+                    }).ToList() ?? new();
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error al cargar actividad completa: {ex.Message}");
-                    // Fallback a datos básicos
                     actividad = new CrearActividadRequest
                     {
                         FechaPublicacion = ActividadEditar.FechaInicio,
                         ActividadActiva = !ActividadEditar.Eliminado
                     };
+                    _idsArchivosExistentesAlAbrir = new();
                     ListArchivos = new();
                 }
             }
@@ -322,6 +341,7 @@
                     FechaPublicacion = FechaSeleccionada,
                     ActividadActiva = true
                 };
+                _idsArchivosExistentesAlAbrir = new();
                 ListArchivos = new();
             }
             MensajeProcesos = "";
@@ -379,10 +399,12 @@
                 
                 ListArchivos.Add(new ArchivoCargado
                 {
+                    Id = 0,
                     Nombre = file.Name,
                     Tipo = GetFileType(contentType),
                     Ruta = ruta,
-                    Datos = fileData // Guardar datos en memoria para subirlos después
+                    Datos = fileData,
+                    EsExistente = false
                 });
             }
             catch (Exception ex)
@@ -449,31 +471,48 @@
                 }
 
                 // Modo actualización
-                // Construir lista de archivos
                 var archivosRequest = new List<ArchivoRequest>();
                 foreach (var archivo in ListArchivos)
                 {
-                    // TODO: Subir archivo al servidor y obtener nombre único y ruta
-                    // Por ahora, usamos el nombre original como nombre único temporalmente
-                    archivosRequest.Add(new ArchivoRequest
+                    if (archivo.EsExistente && archivo.Id > 0)
                     {
-                        NombreOriginal = archivo.Nombre,
-                        NombreUnico = $"{Guid.NewGuid()}_{archivo.Nombre}",
-                        TipoArchivoId = archivo.Tipo,
-                        Ruta = archivo.Ruta,
-                        Renderizable = false,
-                        Datos = archivo.Datos
-                    });
+                        archivosRequest.Add(new ArchivoRequest
+                        {
+                            Id = archivo.Id,
+                            NombreOriginal = archivo.Nombre,
+                            // Para archivos existentes reutilizamos la ruta tal como viene del backend
+                            NombreUnico = archivo.Ruta,
+                            TipoArchivoId = archivo.Tipo,
+                            Ruta = archivo.Ruta,
+                            Renderizable = false,
+                            Datos = null
+                        });
+                    }
+                    else
+                    {
+                        archivosRequest.Add(new ArchivoRequest
+                        {
+                            NombreOriginal = archivo.Nombre,
+                            // No usamos GUID, dejamos que el backend construya la ruta definitiva
+                            NombreUnico = archivo.Nombre,
+                            TipoArchivoId = archivo.Tipo,
+                            Ruta = archivo.Ruta,
+                            Renderizable = false,
+                            Datos = archivo.Datos
+                        });
+                    }
                 }
+                var archivosEliminados = _idsArchivosExistentesAlAbrir.Except(ListArchivos.Where(a => a.EsExistente).Select(a => a.Id)).ToList();
                 
                 var requestActualizar = new ActualizarActividadRequest
                 {
-                    Id = ActividadEditar.Id, // ID de tab.asignacion_academica_recurso
+                    Id = ActividadEditar.Id,
                     ActividadActiva = actividad.ActividadActiva,
                     FechaPublicacion = actividad.FechaPublicacion,
                     Titulo = actividad.Titulo,
                     Descripcion = actividad.Descripcion,
                     Archivos = archivosRequest.Any() ? archivosRequest : null,
+                    ArchivosEliminados = archivosEliminados.Any() ? archivosEliminados : null,
                     UsuarioId = usuarioId
                 };
                 
@@ -509,12 +548,11 @@
                 var archivosRequest = new List<ArchivoRequest>();
                 foreach (var archivo in ListArchivos)
                 {
-                    // TODO: Subir archivo al servidor y obtener nombre único y ruta
-                    // Por ahora, usamos el nombre original como nombre único temporalmente
+                    // No usamos GUID; el backend construirá la ruta completa a partir del nombre original
                     archivosRequest.Add(new ArchivoRequest
                     {
                         NombreOriginal = archivo.Nombre,
-                        NombreUnico = $"{Guid.NewGuid()}_{archivo.Nombre}",
+                        NombreUnico = archivo.Nombre,
                         TipoArchivoId = archivo.Tipo,
                         Ruta = archivo.Ruta,
                         Renderizable = false,
@@ -567,6 +605,8 @@
 
     private class ArchivoCargado
     {
+        public int Id { get; set; }
+        public bool EsExistente { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public int Tipo { get; set; }
         public string Ruta { get; set; } = string.Empty;

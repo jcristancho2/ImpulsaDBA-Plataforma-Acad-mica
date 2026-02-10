@@ -19,6 +19,9 @@ public class ActividadCompletaDto
     
     // Hipertexto (descripción enriquecida para Asignaciones)
     public string? Hipertexto { get; set; }
+
+    /// <summary>Si la actividad genera entregable (tab.archivo_entrega_estudiante, tab.nota_estudiante).</summary>
+    public bool GeneraEntregable { get; set; }
 }
 
 public class VideoEngancheDto

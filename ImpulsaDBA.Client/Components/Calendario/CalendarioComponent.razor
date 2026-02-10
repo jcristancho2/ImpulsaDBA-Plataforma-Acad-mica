@@ -8,6 +8,8 @@
 @inject CalendarioService CalendarioService
 @inject SweetAlertService Swal
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <div class="calendario-container">
     <!-- Header del Calendario -->
@@ -67,6 +69,8 @@
                             @(dia.EsPasado ? "dia-pasado" : "")
                             @(dia.EsFestivo ? "dia-festivo" : "")
                             @(dia.TieneActividades ? "dia-con-actividades" : "")"
+                     data-drop-day
+                     data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
                      @onclick="() => OnDiaClick(dia.Fecha)">
                     <div class="dia-semana-header">
                         <span class="dia-numero">@dia.Fecha.Day</span>
@@ -79,7 +83,10 @@
                             {
                                 <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
                                      style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"
-                                     title="@ObtenerTextoActividad(actividad)"
+                                     title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
+                                     draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                     data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                     data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
                                      @onclick="() => OnActividadClick(actividad)"
                                      @onclick:stopPropagation="true">
                                     <span class="actividad-texto">@ObtenerTextoEtiqueta(actividad)</span>
@@ -112,6 +119,8 @@
                             @(dia.EsPasado ? "dia-pasado" : "")
                             @(dia.EsFestivo ? "dia-festivo" : "")
                             @(dia.TieneActividades ? "dia-con-actividades" : "")"
+                     data-drop-day
+                     data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
                      @onclick="() => OnDiaClick(dia.Fecha)">
                     <span class="dia-numero">@dia.Fecha.Day</span>
                     @if (dia.TieneActividades && dia.Actividades.Any())
@@ -121,7 +130,10 @@
                             {
                                 <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
                                      style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"
-                                     title="@ObtenerTextoActividad(actividad)"
+                                     title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
+                                     draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                     data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                     data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
                                      @onclick="() => OnActividadClick(actividad)"
                                      @onclick:stopPropagation="true">
                                     <span class="actividad-texto">@ObtenerTextoEtiqueta(actividad)</span>
@@ -1818,6 +1830,80 @@
                 await OnDiaSeleccionado.InvokeAsync(fecha);
             }
         }
+    }
+
+    private DotNetObjectReference<CalendarioComponent>? _dotNetRef;
+    private bool _dragDropJsInitialized;
+
+    /// <summary>
+    /// Llamado desde JavaScript cuando el usuario suelta una actividad en un día (drag and drop nativo).
+    /// </summary>
+    [JSInvokable]
+    public async Task HandleCalendarDrop(int idAsignacionAcademicaRecurso, string fechaStr)
+    {
+        if (!DateTime.TryParse(fechaStr, out var fechaDestino))
+            return;
+        var fechaDestinoDate = fechaDestino.Date;
+        try
+        {
+            await CalendarioService.MoverActividadAsync(idAsignacionAcademicaRecurso, fechaDestinoDate);
+            await RecargarCalendario();
+            await Swal.FireAsync(new SweetAlertOptions
+            {
+                Icon = SweetAlertIcon.Success,
+                Title = "Fecha actualizada",
+                Text = "La actividad se movió al nuevo día.",
+                Timer = 2000,
+                ShowConfirmButton = false
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al mover actividad: {ex.Message}");
+            await Swal.FireAsync(new SweetAlertOptions
+            {
+                Icon = SweetAlertIcon.Error,
+                Title = "Error",
+                Text = "No se pudo mover la actividad.",
+                ConfirmButtonText = "Aceptar"
+            });
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (vistaActual != VistaCalendario.Mes && vistaActual != VistaCalendario.Semana)
+            return;
+        if (TipoFiltro != "asignaturas" || IdAsignacionAcademica <= 0)
+            return;
+        try
+        {
+            if (firstRender)
+            {
+                _dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("ImpulsaDBA_CalendarDragDrop.init", _dotNetRef);
+                _dragDropJsInitialized = true;
+            }
+            else if (_dragDropJsInitialized && _dotNetRef != null)
+            {
+                await JSRuntime.InvokeVoidAsync("ImpulsaDBA_CalendarDragDrop.update", _dotNetRef);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Calendario drag-drop init/update: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (_dragDropJsInitialized)
+                _ = JSRuntime.InvokeVoidAsync("ImpulsaDBA_CalendarDragDrop.dispose");
+        }
+        catch { /* ignore */ }
+        _dotNetRef?.Dispose();
     }
 
     /// <summary>
