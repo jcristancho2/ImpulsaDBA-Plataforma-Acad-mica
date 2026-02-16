@@ -269,5 +269,72 @@ namespace ImpulsaDBA.Client.Services
                     : "Error al duplicar la actividad.");
             }
         }
+
+        /// <summary>Lista actividades con entregas para que el docente califique (opcional filtro por grupo).</summary>
+        public async Task<List<ActividadParaCalificarDto>> ObtenerActividadesParaCalificarAsync(int profesorId, int? idGrupo)
+        {
+            try
+            {
+                var url = $"api/calendario/docente/calificar/actividades?profesorId={profesorId}";
+                if (idGrupo.HasValue && idGrupo.Value > 0)
+                    url += $"&idGrupo={idGrupo.Value}";
+                var list = await _httpClient.GetFromJsonAsync<List<ActividadParaCalificarDto>>(url);
+                return list ?? new List<ActividadParaCalificarDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener actividades para calificar: {ex.Message}");
+                return new List<ActividadParaCalificarDto>();
+            }
+        }
+
+        /// <summary>Lista entregas de estudiantes por recurso para calificar.</summary>
+        public async Task<List<EntregaParaCalificarDto>> ObtenerEntregasParaCalificarAsync(int idRecurso)
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<EntregaParaCalificarDto>>(
+                    $"api/calendario/docente/calificar/entregas?idRecurso={idRecurso}");
+                return list ?? new List<EntregaParaCalificarDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener entregas para calificar: {ex.Message}");
+                return new List<EntregaParaCalificarDto>();
+            }
+        }
+
+        /// <summary>Asigna o actualiza la nota de una entrega.</summary>
+        public async Task<bool> AsignarNotaAsync(int idNotaEstudiante, decimal nota)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync("api/calendario/docente/calificar/nota",
+                    new AsignarNotaRequest { IdNotaEstudiante = idNotaEstudiante, Nota = nota });
+                if (!response.IsSuccessStatusCode) return false;
+                var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                return json.TryGetProperty("exito", out var exito) && exito.GetBoolean();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al asignar nota: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>URL para ver o descargar un archivo de entrega de estudiante (ruta relativa). Si descargar es true y se pasa nombreOriginal, la descarga usará ese nombre.</summary>
+        public string GetUrlArchivoEntrega(string rutaRelativa, bool descargar = false, string? nombreOriginal = null)
+        {
+            if (string.IsNullOrWhiteSpace(rutaRelativa)) return "#";
+            var baseUrl = _httpClient.BaseAddress?.ToString()?.TrimEnd('/') ?? "";
+            var url = $"{baseUrl}/api/archivos/servir?ruta={Uri.EscapeDataString(rutaRelativa)}";
+            if (descargar)
+            {
+                url += "&descargar=1";
+                if (!string.IsNullOrWhiteSpace(nombreOriginal))
+                    url += "&nombre=" + Uri.EscapeDataString(nombreOriginal.Trim());
+            }
+            return url;
+        }
     }
 }

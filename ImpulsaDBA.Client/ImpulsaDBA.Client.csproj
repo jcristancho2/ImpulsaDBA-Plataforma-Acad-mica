@@ -31,7 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ImpulsaDBA.Shared\ImpulsaDBA.Shared.csproj" />
+    <!-- Referencia al proyecto compartido ubicado en /Users/raucrow/Work/API/ImpulsaDBA.Shared -->
+    <ProjectReference Include="..\..\API\ImpulsaDBA.Shared\ImpulsaDBA.Shared.csproj" />
   </ItemGroup>
 
 </Project>

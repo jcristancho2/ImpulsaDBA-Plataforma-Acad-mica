@@ -35,6 +35,11 @@
                 <i class="bi bi-calendar3 nav-icon"></i>
                 <span class="nav-text">Calendario</span>
             </button>
+            @*<button class="nav-item @GetVistaActiveClass("calificar")" @onclick="@(() => MostrarVista("calificar"))">
+                <i class="bi bi-clipboard-check nav-icon"></i>
+                <span class="nav-text">Calificar actividades</span>
+            </button>
+            *@
             <button class="nav-item @GetVistaActiveClass("duplicar")" @onclick="@(() => MostrarVista("duplicar"))">
                 <i class="bi bi-copy nav-icon"></i>
                 <span class="nav-text">Duplicar actividades</span>
@@ -105,6 +110,8 @@
             vistaActual = "asignaturas";
         else if (path.Contains("/calendario"))
             vistaActual = "calendario";
+        else if (path.Contains("/calificar-actividades"))
+            vistaActual = "calificar";
         else if (path.Contains("/duplicar-actividades"))
             vistaActual = "duplicar";
     }
@@ -174,6 +181,7 @@
             "inicio" => "/dashboard/inicio",
             "asignaturas" => "/dashboard/asignaturas",
             "calendario" => "/dashboard/calendario",
+                "calificar" => "/dashboard/calificar-actividades",
             "duplicar" => "/dashboard/duplicar-actividades",
             _ => "/dashboard/inicio"
         };
