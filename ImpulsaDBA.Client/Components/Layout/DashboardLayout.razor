@@ -44,6 +44,10 @@
                 <i class="bi bi-copy nav-icon"></i>
                 <span class="nav-text">Duplicar actividades</span>
             </button>
+            <a href="/dashboard/foro" class="nav-item @(EsRutaActivaForo() ? "active" : "")">
+                <i class="bi bi-chat-dots nav-icon"></i>
+                <span class="nav-text">Foro</span>
+            </a>
         </nav>
         
         <div class="sidebar-footer">
@@ -196,6 +200,12 @@
     private string GetVistaActiveClass(string vista)
     {
         return vistaActual == vista ? "active" : "";
+    }
+
+    private bool EsRutaActivaForo()
+    {
+        var path = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.TrimEnd('/');
+        return path.StartsWith("/dashboard/foro", StringComparison.OrdinalIgnoreCase);
     }
     
     /// <summary>

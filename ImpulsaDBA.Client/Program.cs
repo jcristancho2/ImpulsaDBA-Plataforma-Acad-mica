@@ -52,5 +52,6 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AsignaturaService>();
 builder.Services.AddScoped<CalendarioService>();
 builder.Services.AddScoped<AyudaService>();
+builder.Services.AddScoped<ForoService>();
 
 await builder.Build().RunAsync();

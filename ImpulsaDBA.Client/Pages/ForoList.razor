@@ -1,0 +1,90 @@
+@page "/dashboard/foro"
+@layout DashboardLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using ImpulsaDBA.Shared.DTOs
+@using ImpulsaDBA.Client.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject AsignaturaService AsignaturaService
+@inject NavigationManager Navigation
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Foros - ImpulsaDBA</PageTitle>
+
+<div class="foro-list-page">
+    <div class="page-header-asignaturas">
+        <h1>Foros</h1>
+        <p class="subtitle">Elige una asignatura para ver o participar en el foro del grupo</p>
+    </div>
+
+    @if (cargando)
+    {
+        <div class="loading-asignaturas">
+            <div class="spinner"></div>
+            <p>Cargando asignaturas...</p>
+        </div>
+    }
+    else if (asignaturas.Count == 0)
+    {
+        <div class="sin-asignaturas">
+            <i class="bi bi-chat-square-text icon-empty"></i>
+            <p>No tienes asignaturas asignadas.</p>
+        </div>
+    }
+    else
+    {
+        <div class="asignaturas-grid">
+            @foreach (var a in asignaturas)
+            {
+                <a href="/dashboard/foro/@a.IdAsignacionAcademica" class="card-asignatura card-foro" style="--card-accent: @(string.IsNullOrWhiteSpace(a.ColorHex) ? "#e0e0e0" : a.ColorHex); text-decoration: none; color: inherit;">
+                    <div class="card-asignatura-accent"></div>
+                    <div class="card-asignatura-body">
+                        <h3 class="card-asignatura-titulo">@a.Nombre</h3>
+                        <div class="card-asignatura-meta">
+                            <span class="meta-item"><i class="bi bi-people"></i> @a.Grupo</span>
+                            <span class="meta-item"><i class="bi bi-chat-dots"></i> Ir al foro</span>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .foro-list-page { max-width: 1100px; margin: 0 auto; }
+    .page-header-asignaturas { margin-bottom: 1.5rem; }
+    .page-header-asignaturas h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 0.25rem 0; }
+    .page-header-asignaturas .subtitle { color: #666; margin: 0; font-size: 0.95rem; }
+    .loading-asignaturas, .sin-asignaturas { text-align: center; padding: 3rem 1rem; color: #666; }
+    .loading-asignaturas .spinner { width: 40px; height: 40px; border: 3px solid #dee2e6; border-top-color: var(--color-primary, #0d6efd); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    .sin-asignaturas .icon-empty { font-size: 3rem; color: #adb5bd; margin-bottom: 0.5rem; }
+    .asignaturas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+    .card-foro { display: block; transition: box-shadow 0.2s ease, transform 0.2s ease; }
+    .card-foro:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
+    .card-asignatura { position: relative; background: var(--color-bg-primary, #fff); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid var(--color-border, #e9ecef); }
+    .card-asignatura-accent { height: 4px; background: var(--card-accent, #e0e0e0); }
+    .card-asignatura-body { padding: 1.25rem; }
+    .card-asignatura-titulo { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.75rem 0; }
+    .card-asignatura-meta { display: flex; flex-direction: column; gap: 0.35rem; }
+    .card-asignatura-meta .meta-item { font-size: 0.9rem; color: var(--color-text-secondary, #555); display: flex; align-items: center; gap: 0.5rem; }
+</style>
+
+@code {
+    private List<AsignaturaDto> asignaturas = new();
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int profesorId))
+        {
+            cargando = false;
+            return;
+        }
+        asignaturas = await AsignaturaService.ObtenerAsignaturasPorProfesor(profesorId);
+        cargando = false;
+    }
+}
