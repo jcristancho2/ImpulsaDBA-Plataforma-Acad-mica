@@ -23,12 +23,27 @@
             <a href="/dashboard/foro" class="back-link"><i class="bi bi-arrow-left"></i> Volver al listado</a>
             <h1>@(asignaturaActual != null ? $"{asignaturaActual.Nombre} ({asignaturaActual.Grupo})" : "Foro")</h1>
         </div>
-        <div class="foro-header-search">
-            <input class="foro-search-input"
-                   placeholder="Buscar foro por materia y Enter..."
-                   @bind="terminoBusquedaForo"
-                   @bind:event="oninput"
-                   @onkeydown="OnSearchKeyDown" />
+        <div class="foro-header-actions">
+            <label class="foro-auditoria-toggle">
+                <input type="checkbox" checked="@modoAuditoria" @onchange="OnAuditoriaChanged" />
+                <span><i class="bi bi-eye-fill"></i> Auditoría</span>
+            </label>
+            <div class="foro-search-wrap">
+                <input class="foro-search-input"
+                       placeholder="Buscar foro por materia (Nombre o grupo)..."
+                       @bind="terminoBusquedaForo"
+                       @bind:event="oninput"
+                       @onkeydown="OnSearchKeyDown" />
+                @if (ResultadosBusquedaForo.Any())
+                {
+                    <ul class="foro-search-dropdown">
+                        @foreach (var a in ResultadosBusquedaForo)
+                        {
+                            <li><button type="button" class="foro-search-item" @onclick="@(() => IrAForo(a))">@TituloForo(a)</button></li>
+                        }
+                    </ul>
+                }
+            </div>
         </div>
     </div>
 
@@ -43,8 +58,9 @@
     {
         <div class="foro-container">
             <div class="foro-comentarios">
-                @foreach (var c in comentarios)
+                @foreach (var c in comentariosVisibles)
                 {
+                    var original = ObtenerOriginal(c);
                     <div class="comentario-row @(c.IdPersona == userId ? "comentario-propio" : "comentario-ajeno")">
                         <div class="comentario-card @(c.IdPersona == userId ? "comentario-card-propio" : "comentario-card-ajeno")">
                         <div class="comentario-header">
@@ -54,7 +70,7 @@
                             }
                             <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
                             <div class="comentario-acciones">
-                                @if (c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
+                                @if (!c.Eliminado && c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
                                 {
                                     <button type="button" class="btn-accion btn-editar" @onclick="@(() => IniciarEdicion(c))"><i class="bi bi-brush-fill"></i> Editar</button>
                                     <button type="button" class="btn-accion btn-eliminar" @onclick="@(() => Eliminar(c))"><i class="bi bi-trash-fill"></i> Eliminar</button>
@@ -65,14 +81,6 @@
                                 }
                             </div>
                         </div>
-                        @if (c.Editado)
-                        {
-                            <div class="comentario-editado"><i class="bi bi-body-text"></i> Editado</div>
-                        }
-                        @if (c.Eliminado)
-                        {
-                            <div class="comentario-editado" style="color:#dc3545;"><i class="bi bi-trash"></i> Eliminado</div>
-                        }
                         @if (idEditando == c.Id)
                         {
                             <div class="comentario-edicion">
@@ -83,42 +91,43 @@
                                 </div>
                             </div>
                         }
+                        else if (modoAuditoria && c.Eliminado)
+                        {
+                            <div class="mensaje-eliminado">
+                                <div class="etiqueta-eliminado">Eliminado</div>
+                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
+                            </div>
+                        }
+                        else if (modoAuditoria && c.Editado && original != null)
+                        {
+                            <div class="mensaje-original">
+                                <div class="etiqueta-original">Mensaje original</div>
+                                <div class="comentario-cuerpo">@ComentarioParaMostrar(original.Comentario)</div>
+                            </div>
+                            <div class="mensaje-editado">
+                                <div class="etiqueta-editado">Editado</div>
+                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
+                            </div>
+                        }
                         else
                         {
-                            <div class="comentario-cuerpo ql-editor ql-blank" @onclick="@(() => { })">@((MarkupString)c.Comentario)</div>
-                        }
-
-@*
-                        <div class="comentario-auditoria">
-                            <button type="button" class="btn btn-link btn-sm p-0" @onclick="@(() => ToggleHistorial(c.Id))">
-                                <i class="bi bi-clock-history"></i> Ver historial
-                            </button>
-                        </div>
-*@
-                        @if (idHistorialAbierto == c.Id)
-                        {
-                            <div class="comentario-historial mt-2">
-                                @if (cargandoHistorial)
-                                {
-                                    <div style="font-size:0.85rem;color:#6c757d;">Cargando historial...</div>
-                                }
-                                else if (historialActual.Count == 0)
-                                {
-                                    <div style="font-size:0.85rem;color:#6c757d;">Sin versiones anteriores.</div>
-                                }
-                                else
-                                {
-                                    <ul class="lista-historial">
-                                        @foreach (var h in historialActual)
-                                        {
-                                            <li>
-                                                <div class="hist-fecha">@h.Fecha.ToString("dd/MM/yyyy HH:mm")</div>
-                                                <div class="hist-contenido">@((MarkupString)h.Comentario)</div>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
+                            @if (c.IdForoReferencia is int idRef && idRef > 0)
+                            {
+                                var refMsg = ObtenerMensajeReferencia(idRef);
+                                <div class="reply-quoted">
+                                    @if (refMsg != null)
+                                    {
+                                        <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
+                                        <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
+                                    }
+                                </div>
+                                <div class="reply-response-label">Respuesta:</div>
+                            }
+                            <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
                         }
                         </div>
                     </div>
@@ -173,12 +182,23 @@
         font-size: 0.9rem;
         color: #6c757d;
     }
-    .foro-header-search {
+    .foro-header-actions {
         display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        min-width: 220px;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
     }
+    .foro-auditoria-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+        color: #495057;
+        cursor: pointer;
+        user-select: none;
+    }
+    .foro-auditoria-toggle input { cursor: pointer; }
+    .foro-auditoria-toggle span { display: inline-flex; align-items: center; gap: 0.25rem; }
     .foro-search-input {
         padding: 0.4rem 0.6rem;
         border-radius: 999px;
@@ -190,6 +210,37 @@
         outline: none;
         border-color: var(--color-primary, #0d6efd);
         box-shadow: 0 0 0 2px rgba(13,110,253,0.15);
+    }
+    .foro-search-wrap { position: relative; }
+    .foro-search-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin: 4px 0 0;
+        padding: 0;
+        list-style: none;
+        background: var(--color-bg-primary, #fff);
+        border: 1px solid var(--color-border, #dee2e6);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 100;
+    }
+    .foro-search-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #212529;
+    }
+    .foro-search-item:hover, .foro-search-item:focus {
+        background: #f0f4f8;
     }
     .foro-search-hint {
         font-size: 0.75rem;
@@ -239,6 +290,32 @@
     .btn-eliminar { color: #dc3545; }
     .comentario-editado { font-size: 0.8rem; color: #6c757d; margin-bottom: 0.25rem; }
     .comentario-cuerpo { word-wrap: break-word; overflow: hidden; white-space: normal; font-size: 1.1rem; }
+    /* Auditoría */
+    .mensaje-original {
+        background: #f1f3f5;
+        border-left: 4px solid #868e96;
+        padding: 8px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+    }
+    .mensaje-editado {
+        background: #d0ebff;
+        border-left: 4px solid #339af0;
+        padding: 8px;
+        border-radius: 6px;
+    }
+    .mensaje-eliminado {
+        opacity: 0.8;
+        color: #6c757d;
+    }
+    .etiqueta-original,
+    .etiqueta-editado,
+    .etiqueta-eliminado {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .etiqueta-eliminado { color: #c92a2a; }
     .comentario-edicion { margin-top: 0.5rem; }
     .input-edicion { width: 100%; padding: 0.5rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
     .edicion-botones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
@@ -304,6 +381,13 @@
         color: #6c757d;
     }
 
+    .reply-response-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #495057;
+        margin: 0.35rem 0 0.15rem 0;
+    }
+
     .comentario-auditoria {
         margin-top: 0.25rem;
         font-size: 0.8rem;
@@ -338,6 +422,9 @@
         }
         .foro-header {
             align-items: stretch;
+        }
+        .foro-header-actions {
+            width: 100%;
         }
         .foro-header-left h1 {
             font-size: 1.3rem;
@@ -400,6 +487,7 @@
     [Parameter] public int IdAsignacionAcademica { get; set; }
 
     private List<ForoDto> comentarios = new();
+    private bool modoAuditoria;
     private List<AsignaturaDto> asignaturas = new();
     private AsignaturaDto? asignaturaActual;
     private string terminoBusquedaForo = string.Empty;
@@ -411,12 +499,11 @@
     private HubConnection? _hubConnection;
 
     // Auditoría
-    private int? idHistorialAbierto;
-    private bool cargandoHistorial;
-    private List<ForoHistorialDto> historialActual = new();
+    private Dictionary<int, List<ForoHistorialDto>> historialPorComentario = new();
 
     // Respuesta tipo WhatsApp (solo visual)
     private ForoDto? mensajeRespondiendo;
+    private int _ultimoIdAsignacion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -466,30 +553,94 @@
             }
         }
 
+        _ultimoIdAsignacion = IdAsignacionAcademica;
         cargando = false;
         StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (userId == 0) return;
+        if (_ultimoIdAsignacion == IdAsignacionAcademica) return;
+        _ultimoIdAsignacion = IdAsignacionAcademica;
+        await RecargarComentarios();
+        if (asignaturas.Count > 0)
+            asignaturaActual = asignaturas.FirstOrDefault(a => a.IdAsignacionAcademica == IdAsignacionAcademica);
+        if (_hubConnection?.State == HubConnectionState.Connected)
+            await _hubConnection.InvokeAsync("Suscribirse", IdAsignacionAcademica);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RecargarComentarios()
     {
         // En plataforma académica usamos la vista de docente (incluye eliminados)
         comentarios = await ForoService.ObtenerPorAsignacionDocenteAsync(IdAsignacionAcademica);
+        if (modoAuditoria)
+            await CargarHistorialesAuditoria();
+    }
+
+    private IEnumerable<ForoDto> comentariosVisibles =>
+        modoAuditoria ? comentarios : comentarios.Where(c => !c.Eliminado);
+
+    private async Task OnAuditoriaChanged(ChangeEventArgs e)
+    {
+        modoAuditoria = e.Value as bool? ?? false;
+        if (modoAuditoria)
+            await CargarHistorialesAuditoria();
+        else
+            historialPorComentario.Clear();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CargarHistorialesAuditoria()
+    {
+        historialPorComentario.Clear();
+        var ids = comentarios.Where(c => c.Editado).Select(c => c.Id).Distinct().ToList();
+        foreach (var id in ids)
+        {
+            historialPorComentario[id] = await ForoService.ObtenerHistorialAsync(id);
+        }
+    }
+
+    private ForoHistorialDto? ObtenerOriginal(ForoDto c)
+    {
+        if (!historialPorComentario.ContainsKey(c.Id))
+            return null;
+        return historialPorComentario[c.Id].OrderBy(h => h.Fecha).FirstOrDefault();
+    }
+
+    /// <summary>Título del foro como en el h1: Nombre (Grupo).</summary>
+    private static string TituloForo(AsignaturaDto a) => $"{a.Nombre} ({a.Grupo})";
+
+    /// <summary>Resultados que coinciden con el término (nombre o título completo).</summary>
+    private IEnumerable<AsignaturaDto> ResultadosBusquedaForo
+    {
+        get
+        {
+            var termino = terminoBusquedaForo?.Trim() ?? "";
+            if (string.IsNullOrEmpty(termino) || asignaturas.Count == 0) return Array.Empty<AsignaturaDto>();
+            return asignaturas.Where(a =>
+                TituloForo(a).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                a.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private void IrAForo(AsignaturaDto a)
+    {
+        terminoBusquedaForo = string.Empty;
+        Navigation.NavigateTo($"/dashboard/foro/{a.IdAsignacionAcademica}");
     }
 
     private async Task BuscarYNavegarForo()
     {
-        if (string.IsNullOrWhiteSpace(terminoBusquedaForo) || asignaturas.Count == 0)
-            return;
+        var resultados = ResultadosBusquedaForo.ToList();
+        if (resultados.Count == 0) return;
 
-        var termino = terminoBusquedaForo.Trim();
-        var destino = asignaturas
-            .FirstOrDefault(a => a.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase));
-
-        if (destino is null)
-            return;
-
-        // Navegar al foro de la asignatura encontrada
+        // Enter: ir al primero de la lista
+        var destino = resultados[0];
+        terminoBusquedaForo = string.Empty;
         Navigation.NavigateTo($"/dashboard/foro/{destino.IdAsignacionAcademica}");
+        await Task.CompletedTask;
     }
 
     private async Task OnSearchKeyDown(KeyboardEventArgs e)
@@ -503,18 +654,8 @@
     private async Task EnviarComentario()
     {
         if (string.IsNullOrWhiteSpace(nuevoComentario) || nuevoComentario.Trim() == "<p><br></p>") return;
+        // Solo se envía el texto nuevo; la respuesta se guarda en BD como id_foro_referencia + mensaje (sin HTML).
         var texto = nuevoComentario.Trim();
-
-        if (mensajeRespondiendo != null)
-        {
-            var nombreAutor = mensajeRespondiendo.NombrePersona ?? "Alguien";
-            var original = mensajeRespondiendo.Comentario;
-            texto =
-                $@"<div class=""reply-quoted"">
-                        <div class=""reply-quoted-author""><span class=""reply-quoted-name"">{System.Net.WebUtility.HtmlEncode(nombreAutor)}</span> escribió:</div>
-                        <div class=""reply-quoted-text"">{original}</div>
-                    </div>" + texto;
-        }
 
         CrearComentarioForoRequest request = new CrearComentarioForoRequest
         {
@@ -553,10 +694,20 @@
     {
         if (mensajeRespondiendo == null || string.IsNullOrWhiteSpace(mensajeRespondiendo.Comentario))
             return "";
-        var texto = System.Text.RegularExpressions.Regex.Replace(mensajeRespondiendo.Comentario, "<[^>]+>", " ");
-        texto = System.Net.WebUtility.HtmlDecode(texto).Trim();
+        var texto = mensajeRespondiendo.Comentario.Trim();
         const int maxLen = 150;
         return texto.Length <= maxLen ? texto : texto.Substring(0, maxLen) + "…";
+    }
+
+    private ForoDto? ObtenerMensajeReferencia(int idForoReferencia)
+        => comentarios.FirstOrDefault(x => x.Id == idForoReferencia);
+
+    /// <summary>Muestra el comentario (texto guardado sin HTML) con saltos de línea.</summary>
+    private static MarkupString ComentarioParaMostrar(string? comentario)
+    {
+        if (string.IsNullOrEmpty(comentario)) return (MarkupString)"";
+        var s = System.Net.WebUtility.HtmlEncode(comentario).Replace("\r\n", "<br/>").Replace("\n", "<br/>");
+        return (MarkupString)s;
     }
 
     private void CancelarEdicion()
@@ -592,22 +743,6 @@
             await RecargarComentarios();
             StateHasChanged();
         }
-    }
-
-    private async Task ToggleHistorial(int idForo)
-    {
-        if (idHistorialAbierto == idForo)
-        {
-            idHistorialAbierto = null;
-            historialActual.Clear();
-            return;
-        }
-
-        cargandoHistorial = true;
-        idHistorialAbierto = idForo;
-        historialActual = await ForoService.ObtenerHistorialAsync(idForo);
-        cargandoHistorial = false;
-        await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
