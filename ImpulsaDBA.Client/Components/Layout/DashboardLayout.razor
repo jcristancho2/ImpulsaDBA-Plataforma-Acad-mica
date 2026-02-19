@@ -64,12 +64,12 @@
         <!-- Header -->
         <header class="dashboard-header">
             <div class="header-left">
-                <div class="search-container">
+                @*<div class="search-container">
                     <i class="bi bi-search search-icon"></i>
                     <input type="text" class="search-input" placeholder="Buscar asignaturas..." />
-                </div>
+                </div>*@
             </div>
-            
+
             <div class="header-center">
                 @if (authState != null && authState.User.Identity?.IsAuthenticated == true)
                 {
@@ -95,7 +95,7 @@
 
 @code {
     private AuthenticationState? authState;
-    private bool isCollapsed = false;
+    private bool isCollapsed = true;
     private const string SIDEBAR_STATE_KEY = "sidebar_collapsed";
     private string nombreInstitucion = "INSTITUCIÓN EDUCATIVA";
     
@@ -124,16 +124,15 @@
     {
         authState = await AuthStateProvider.GetAuthenticationStateAsync();
         
-        // Cargar estado del sidebar desde LocalStorage
+        // Cargar estado del sidebar desde LocalStorage (por defecto: colapsado)
         try
         {
-            var savedState = await LocalStorage.GetItemAsync<bool>(SIDEBAR_STATE_KEY);
-            isCollapsed = savedState;
+            var saved = await LocalStorage.GetItemAsync<string>(SIDEBAR_STATE_KEY);
+            isCollapsed = saved != "false";
         }
         catch
         {
-            // Si hay error, usar estado por defecto (expandido)
-            isCollapsed = false;
+            isCollapsed = true;
         }
 
         // Obtener nombre de institución desde BD (usando las asignaturas asignadas al docente)
@@ -162,7 +161,7 @@
         // Guardar estado en LocalStorage
         try
         {
-            await LocalStorage.SetItemAsync(SIDEBAR_STATE_KEY, isCollapsed);
+            await LocalStorage.SetItemAsync(SIDEBAR_STATE_KEY, isCollapsed ? "true" : "false");
         }
         catch
         {

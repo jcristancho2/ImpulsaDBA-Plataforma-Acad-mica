@@ -6,8 +6,10 @@
 @using ImpulsaDBA.Shared.Requests
 @using ImpulsaDBA.Client.Services
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Components.Web
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ForoService ForoService
+@inject AsignaturaService AsignaturaService
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
@@ -17,8 +19,17 @@
 
 <div class="foro-page">
     <div class="foro-header">
-        <a href="/dashboard/foro" class="back-link"><i class="bi bi-arrow-left"></i> Volver al listado</a>
-        <h1>Foro de la asignación</h1>
+        <div class="foro-header-left">
+            <a href="/dashboard/foro" class="back-link"><i class="bi bi-arrow-left"></i> Volver al listado</a>
+            <h1>@(asignaturaActual != null ? $"{asignaturaActual.Nombre} ({asignaturaActual.Grupo})" : "Foro")</h1>
+        </div>
+        <div class="foro-header-search">
+            <input class="foro-search-input"
+                   placeholder="Buscar foro por materia y Enter..."
+                   @bind="terminoBusquedaForo"
+                   @bind:event="oninput"
+                   @onkeydown="OnSearchKeyDown" />
+        </div>
     </div>
 
     @if (cargando)
@@ -34,10 +45,14 @@
             <div class="foro-comentarios">
                 @foreach (var c in comentarios)
                 {
-                    <div class="comentario-card">
+                    <div class="comentario-row @(c.IdPersona == userId ? "comentario-propio" : "comentario-ajeno")">
+                        <div class="comentario-card @(c.IdPersona == userId ? "comentario-card-propio" : "comentario-card-ajeno")">
                         <div class="comentario-header">
-                            <span class="comentario-autor">@c.NombrePersona</span>
-                            <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
+                            @if (c.IdPersona != userId)
+                            {
+                                <span class="comentario-autor">@c.NombrePersona</span>
+                            }
+                            <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
                             <div class="comentario-acciones">
                                 @if (c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
                                 {
@@ -46,7 +61,7 @@
                                 }
                                 @if (c.IdPersona != userId)
                                 {
-                                    <button type="button" class="btn-accion" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill"></i> Responder</button>
+                                    <button type="button" class="btn-accion" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill"></i> </button>
                                 }
                             </div>
                         </div>
@@ -73,12 +88,13 @@
                             <div class="comentario-cuerpo ql-editor ql-blank" @onclick="@(() => { })">@((MarkupString)c.Comentario)</div>
                         }
 
+@*
                         <div class="comentario-auditoria">
                             <button type="button" class="btn btn-link btn-sm p-0" @onclick="@(() => ToggleHistorial(c.Id))">
                                 <i class="bi bi-clock-history"></i> Ver historial
                             </button>
                         </div>
-
+*@
                         @if (idHistorialAbierto == c.Id)
                         {
                             <div class="comentario-historial mt-2">
@@ -104,6 +120,7 @@
                                 }
                             </div>
                         }
+                        </div>
                     </div>
                 }
             </div>
@@ -113,15 +130,16 @@
                     @if (mensajeRespondiendo != null)
                     {
                         <div class="reply-banner">
-                            <div class="reply-title">
-                                Respondiendo a @mensajeRespondiendo.NombrePersona
+                            <div class="reply-banner-content">
+                                <div class="reply-title">Respondiendo a @mensajeRespondiendo.NombrePersona</div>
+                                <div class="reply-quoted-preview">@MensajeRespondidoPreview()</div>
                             </div>
                             <button type="button" class="btn btn-link btn-sm p-0" @onclick="CancelarRespuesta">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </div>
                     }
-                    <textarea @bind="nuevoComentario" class="input-nuevo" placeholder="Escribe un comentario..." rows="3"></textarea>
+                    <textarea @bind="nuevoComentario" class="input-nuevo" placeholder="Escribe un comentario..." rows="1"></textarea>
                     <button type="button" class="btn btn-primary btn-enviar" @onclick="EnviarComentario" disabled="@(string.IsNullOrWhiteSpace(nuevoComentario))">
                         <i class="bi bi-send-fill"></i> Enviar
                     </button>
@@ -132,49 +150,135 @@
 </div>
 
 <style>
-    .foro-page { max-width: 800px; margin: 0 auto; padding: 1rem; }
-    .foro-header { margin-bottom: 1.5rem; }
+    .foro-page {
+    max-width: 100%; margin: 0 auto; padding: 1rem; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
+    .foro-header {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .foro-header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
     .back-link { color: var(--color-primary, #0d6efd); text-decoration: none; font-size: 0.9rem; display: inline-block; margin-bottom: 0.5rem; }
     .back-link:hover { text-decoration: underline; }
     .foro-header h1 { font-size: 1.5rem; margin: 0; }
+    .foro-header-materia {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .foro-header-search {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 220px;
+    }
+    .foro-search-input {
+        padding: 0.4rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border, #dee2e6);
+        font-size: 0.9rem;
+        min-width: 220px;
+    }
+    .foro-search-input:focus {
+        outline: none;
+        border-color: var(--color-primary, #0d6efd);
+        box-shadow: 0 0 0 2px rgba(13,110,253,0.15);
+    }
+    .foro-search-hint {
+        font-size: 0.75rem;
+        color: #868e96;
+    }
     .foro-loading { text-align: center; padding: 2rem; }
     .foro-loading .spinner { width: 40px; height: 40px; border: 3px solid #eee; border-top-color: var(--color-primary, #0d6efd); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @@keyframes spin { to { transform: rotate(360deg); } }
-    .foro-container { display: flex; flex-direction: column; min-height: 60vh; }
-    .foro-comentarios { flex: 1; overflow: auto; margin-bottom: 1rem; }
-    .comentario-card { border: 1px solid var(--color-border, #dee2e6); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; background: var(--color-bg-primary, #fff); }
-    .comentario-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-    .comentario-autor { font-weight: 600; color: var(--color-primary, #0d6efd); }
+    .foro-container {display: flex; flex-direction: column; flex: 1; min-height: 0;}
+    
+    .foro-comentarios { 
+    flex: 1; overflow-y: auto; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem;}
+
+
+    .comentario-row {
+        display: flex;
+        width: 100%;
+    }
+    .comentario-propio {
+        justify-content: flex-end;
+    }
+    .comentario-ajeno {
+        justify-content: flex-start;
+    }
+    .comentario-card {
+        border: 1px solid var(--color-border, #dee2e6);
+        border-radius: 10px;
+        padding: 0.5rem 0.65rem;
+        margin-bottom: 0;
+        background: var(--color-bg-primary, #fff);
+        max-width: 78%;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .comentario-card-propio {
+        background: #d1e7ff;
+        border-color: #b6d4fe;
+    }
+    .comentario-card-ajeno {
+        background: #f8f9fa;
+    }
+    .comentario-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem;}
+    .comentario-autor { font-weight: 300; color: #6c757d; }
     .comentario-fecha { font-size: 0.8rem; color: #6c757d; }
     .comentario-acciones { margin-left: auto; display: flex; gap: 0.25rem; }
     .btn-accion { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.25rem 0.5rem; }
     .btn-editar { color: var(--color-primary, #0d6efd); }
     .btn-eliminar { color: #dc3545; }
     .comentario-editado { font-size: 0.8rem; color: #6c757d; margin-bottom: 0.25rem; }
-    .comentario-cuerpo { word-wrap: break-word; overflow: hidden; white-space: normal; font-size: 0.95rem; }
+    .comentario-cuerpo { word-wrap: break-word; overflow: hidden; white-space: normal; font-size: 1.1rem; }
     .comentario-edicion { margin-top: 0.5rem; }
     .input-edicion { width: 100%; padding: 0.5rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
     .edicion-botones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
-    .foro-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-border, #dee2e6); }
-    .foro-nuevo { display: flex; flex-direction: column; gap: 0.5rem; }
-    .input-nuevo { width: 100%; padding: 0.75rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
+    .foro-footer {padding-top: 1rem; border-top: 1px solid var(--color-border, #dee2e6); }
+    .foro-nuevo { display: flex; flex-direction: row; gap: 0.5rem; }
+    .input-nuevo { width: 90%; padding: 0.75rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
     .btn-enviar { align-self: flex-end; }
 
     .reply-banner {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 0.35rem 0.5rem;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
         margin-bottom: 0.35rem;
         background-color: #f1f3f5;
         border-radius: 6px;
         font-size: 0.85rem;
     }
 
+    .reply-banner-content {
+        flex: 1;
+        min-width: 0;
+    }
+
     .reply-title {
         font-weight: 500;
         color: #495057;
+        margin-bottom: 0.25rem;
     }
+
+    .reply-quoted-preview {
+        font-size: 0.8rem;
+        color: #6c757d;
+        max-height: 3.5em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.35;
+    }
+
 
     .reply-quoted {
         background-color: #f8f9fa;
@@ -189,6 +293,11 @@
         font-weight: 600;
         color: #495057;
         margin-bottom: 0.15rem;
+    }
+
+    .reply-quoted-name {
+        font-weight: 300;
+        color: var(--color-primary, #0d6efd);
     }
 
     .reply-quoted-text {
@@ -220,12 +329,80 @@
     .hist-contenido {
         font-size: 0.85rem;
     }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .foro-page {
+            max-width: 100%;
+            padding: 0.75rem 0.5rem;
+        }
+        .foro-header {
+            align-items: stretch;
+        }
+        .foro-header-left h1 {
+            font-size: 1.3rem;
+        }
+        .foro-header-materia {
+            font-size: 0.85rem;
+        }
+        .foro-search-input {
+            width: 100%;
+            min-width: 0;
+        }
+        .foro-comentarios {
+            gap: 0.35rem;
+        }
+        .comentario-card {
+            max-width: 90%;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .foro-page {
+            padding: 0.5rem 0.35rem;
+        }
+        .foro-header {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .foro-header-left {
+            width: 100%;
+        }
+        .foro-header-search {
+            width: 100%;
+        }
+        .foro-header-left h1 {
+            font-size: 1.15rem;
+        }
+        .back-link {
+            font-size: 0.85rem;
+        }
+        .comentario-card {
+            max-width: 100%;
+            padding: 0.65rem 0.7rem;
+        }
+        .comentario-header {
+            gap: 0.35rem;
+        }
+        .comentario-acciones {
+            flex-wrap: wrap;
+        }
+        .input-nuevo {
+            font-size: 0.9rem;
+        }
+        .btn-enviar {
+            width: 100%;
+        }
+    }
 </style>
 
 @code {
     [Parameter] public int IdAsignacionAcademica { get; set; }
 
     private List<ForoDto> comentarios = new();
+    private List<AsignaturaDto> asignaturas = new();
+    private AsignaturaDto? asignaturaActual;
+    private string terminoBusquedaForo = string.Empty;
     private bool cargando = true;
     private int userId;
     private string nuevoComentario = string.Empty;
@@ -252,6 +429,18 @@
         }
 
         await RecargarComentarios();
+
+        // Cargar asignaturas del docente para mostrar nombre de materia actual
+        // y habilitar búsqueda rápida de otros foros por nombre.
+        try
+        {
+            asignaturas = await AsignaturaService.ObtenerAsignaturasPorProfesor(userId);
+            asignaturaActual = asignaturas.FirstOrDefault(a => a.IdAsignacionAcademica == IdAsignacionAcademica);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar asignaturas para el foro: {ex.Message}");
+        }
 
         var baseUrl = Http.BaseAddress?.ToString()?.TrimEnd('/') ?? "";
         if (!string.IsNullOrEmpty(baseUrl))
@@ -287,6 +476,30 @@
         comentarios = await ForoService.ObtenerPorAsignacionDocenteAsync(IdAsignacionAcademica);
     }
 
+    private async Task BuscarYNavegarForo()
+    {
+        if (string.IsNullOrWhiteSpace(terminoBusquedaForo) || asignaturas.Count == 0)
+            return;
+
+        var termino = terminoBusquedaForo.Trim();
+        var destino = asignaturas
+            .FirstOrDefault(a => a.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase));
+
+        if (destino is null)
+            return;
+
+        // Navegar al foro de la asignatura encontrada
+        Navigation.NavigateTo($"/dashboard/foro/{destino.IdAsignacionAcademica}");
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await BuscarYNavegarForo();
+        }
+    }
+
     private async Task EnviarComentario()
     {
         if (string.IsNullOrWhiteSpace(nuevoComentario) || nuevoComentario.Trim() == "<p><br></p>") return;
@@ -294,19 +507,21 @@
 
         if (mensajeRespondiendo != null)
         {
+            var nombreAutor = mensajeRespondiendo.NombrePersona ?? "Alguien";
             var original = mensajeRespondiendo.Comentario;
             texto =
                 $@"<div class=""reply-quoted"">
-                        <div class=""reply-quoted-author"">@mensajeRespondiendo.NombrePersona escribió:</div>
+                        <div class=""reply-quoted-author""><span class=""reply-quoted-name"">{System.Net.WebUtility.HtmlEncode(nombreAutor)}</span> escribió:</div>
                         <div class=""reply-quoted-text"">{original}</div>
                     </div>" + texto;
         }
 
-        var request = new CrearComentarioForoRequest
+        CrearComentarioForoRequest request = new CrearComentarioForoRequest
         {
             IdAsignacionAcademica = IdAsignacionAcademica,
             IdPersona = userId,
-            Comentario = texto
+            Comentario = texto,
+            IdForoReferencia = mensajeRespondiendo?.Id
         };
         var creado = await ForoService.CrearComentarioAsync(request);
         if (creado != null)
@@ -332,6 +547,16 @@
     private void CancelarRespuesta()
     {
         mensajeRespondiendo = null;
+    }
+
+    private string MensajeRespondidoPreview()
+    {
+        if (mensajeRespondiendo == null || string.IsNullOrWhiteSpace(mensajeRespondiendo.Comentario))
+            return "";
+        var texto = System.Text.RegularExpressions.Regex.Replace(mensajeRespondiendo.Comentario, "<[^>]+>", " ");
+        texto = System.Net.WebUtility.HtmlDecode(texto).Trim();
+        const int maxLen = 150;
+        return texto.Length <= maxLen ? texto : texto.Substring(0, maxLen) + "…";
     }
 
     private void CancelarEdicion()
