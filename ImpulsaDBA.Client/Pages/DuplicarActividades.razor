@@ -270,7 +270,8 @@
         StateHasChanged();
         try
         {
-            actividadesParaDuplicar = await CalendarioService.ObtenerActividadesParaDuplicarAsync(profesorId, idAsignaturaSeleccionada);
+            // Pasar idAsignacionAcademicaSeleccionada para mostrar solo actividades del curso seleccionado (ej. Quinto A)
+            actividadesParaDuplicar = await CalendarioService.ObtenerActividadesParaDuplicarAsync(profesorId, idAsignaturaSeleccionada, idAsignacionAcademicaSeleccionada);
         }
         finally
         {

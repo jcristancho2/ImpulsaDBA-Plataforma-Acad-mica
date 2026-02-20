@@ -374,19 +374,7 @@ Relación recurso–archivo (varios archivos por actividad).
 
 ---
 
-## 7. Vista
-
-### **plla.View_Asignacion_Academica**
-
-Vista que expone las asignaciones académicas (equivalente a `col.asignacion_academica` con posibles filtros o joins).
-
-**Campos usados en la app:** id_profesor, id_grupo, id_asignatura, id (asignación), etc.
-
-**Uso en la app:** `AsignaturaService.ObtenerAsignaturasPorProfesor`: listado de asignaturas del profesor con grupo, sede, colegio, cantidad de estudiantes y color.
-
----
-
-## 8. Función
+## 7. Función
 
 ### **dbo.fEsUnPeriodo**
 
@@ -401,7 +389,7 @@ Función usada en el health check para probar conectividad y que existan objetos
 | Funcionalidad        | Tablas principales |
 |----------------------|--------------------|
 | Login / auth         | col.persona, col.persona_password, seg.rol, seg.rol_persona |
-| Asignaturas del profesor | plla.View_Asignacion_Academica, aca.grupo, aca.lista, col.asignatura, col.sede, bas.anio, bas.colegio, bas.paleta, bas.area_men_paleta, col.area |
+| Asignaturas del profesor | col.asignacion_academica, aca.grupo, aca.lista, col.asignatura, col.sede, bas.anio, bas.colegio, bas.paleta, bas.area_men_paleta, col.area |
 | Calendario / actividades | tab.recurso, tab.tipo_recurso, tab.asignacion_academica_recurso, tab.hipertexto_recurso, tab.archivo, tab.archivo_recurso, col.asignacion_academica, aca.grupo, bas.anio, bas.periodo, bas.colegio |
 | Archivos (subir/descargar/borrar) | tab.archivo, tab.archivo_recurso, tab.asignacion_academica_recurso, bas.colegio (codigo_dane) |
 | Ayudas (PDF/VIDEO)   | bas.ayuda |

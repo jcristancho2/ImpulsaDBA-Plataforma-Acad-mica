@@ -222,7 +222,7 @@
 
     private void OnAsignaturaClick(AsignaturaDto asignatura)
     {
-        // Cambiar a vista de calendario cuando se hace clic en una asignatura
-        Layout?.CambiarVista("calendario");
+        // Ir al calendario con la asignación académica de la card clicada para mostrar ese grupo
+        Navigation.NavigateTo($"/dashboard/calendario?asignacion={asignatura.IdAsignacionAcademica}", forceLoad: true);
     }
 }

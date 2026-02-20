@@ -346,14 +346,26 @@
                 // Inicializar asignaturas filtradas con todas las asignaturas
                 asignaturasFiltradas = asignaturas.ToList();
                 
-                // Obtener asignaturaId de query string si existe
+                // Obtener asignación o asignaturaId de query string si existe (asignacion = IdAsignacionAcademica, evita mostrar otro grupo)
                 var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
                 var query = uri.Query.TrimStart('?');
                 var queryParams = query.Split('&')
                     .Select(p => p.Split('='))
                     .Where(p => p.Length == 2)
                     .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p[1]));
-                if (queryParams.TryGetValue("asignaturaId", out var asignaturaIdStr))
+                if (queryParams.TryGetValue("asignacion", out var idAsignacionStr))
+                {
+                    if (int.TryParse(idAsignacionStr, out int idAsignacion))
+                    {
+                        asignaturaSeleccionada = asignaturas.FirstOrDefault(a => a.IdAsignacionAcademica == idAsignacion);
+                        if (asignaturaSeleccionada != null)
+                        {
+                            idAsignacionAcademicaActual = asignaturaSeleccionada.IdAsignacionAcademica;
+                            grupoSeleccionado = gruposDisponibles.FirstOrDefault(g => g.GrupoId == asignaturaSeleccionada.GrupoId);
+                        }
+                    }
+                }
+                else if (queryParams.TryGetValue("asignaturaId", out var asignaturaIdStr))
                 {
                     if (int.TryParse(asignaturaIdStr, out int asignaturaId))
                     {
@@ -361,12 +373,11 @@
                         if (asignaturaSeleccionada != null)
                         {
                             idAsignacionAcademicaActual = asignaturaSeleccionada.IdAsignacionAcademica;
-                            // Seleccionar el grupo correspondiente
                             grupoSeleccionado = gruposDisponibles.FirstOrDefault(g => g.GrupoId == asignaturaSeleccionada.GrupoId);
                         }
                     }
                 }
-                else if (asignaturas.Count > 0)
+                if (asignaturaSeleccionada == null && asignaturas.Count > 0)
                 {
                     // Si no hay asignatura en query, usar la primera
                     asignaturaSeleccionada = asignaturas.First();

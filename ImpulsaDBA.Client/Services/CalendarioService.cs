@@ -215,12 +215,14 @@ namespace ImpulsaDBA.Client.Services
             }
         }
 
-        public async Task<List<ActividadParaDuplicarDto>> ObtenerActividadesParaDuplicarAsync(int profesorId, int idAsignatura)
+        public async Task<List<ActividadParaDuplicarDto>> ObtenerActividadesParaDuplicarAsync(int profesorId, int idAsignatura, int idAsignacionAcademica = 0)
         {
             try
             {
-                var list = await _httpClient.GetFromJsonAsync<List<ActividadParaDuplicarDto>>(
-                    $"api/calendario/duplicar/actividades?profesorId={profesorId}&idAsignatura={idAsignatura}");
+                var url = $"api/calendario/duplicar/actividades?profesorId={profesorId}&idAsignatura={idAsignatura}";
+                if (idAsignacionAcademica > 0)
+                    url += $"&idAsignacionAcademica={idAsignacionAcademica}";
+                var list = await _httpClient.GetFromJsonAsync<List<ActividadParaDuplicarDto>>(url);
                 return list ?? new List<ActividadParaDuplicarDto>();
             }
             catch (Exception ex)

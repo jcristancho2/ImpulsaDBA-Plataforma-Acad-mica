@@ -196,7 +196,7 @@
 
     private void OnAsignaturaClick(AsignaturaDto asignatura)
     {
-        // Guardar asignatura seleccionada y navegar a calendario
-        Navigation.NavigateTo($"/dashboard/calendario?asignaturaId={asignatura.Id}");
+        // Navegar al calendario con la asignación académica clicada (grupo correcto)
+        Navigation.NavigateTo($"/dashboard/calendario?asignacion={asignatura.IdAsignacionAcademica}", forceLoad: true);
     }
 }
