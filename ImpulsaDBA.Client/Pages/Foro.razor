@@ -60,75 +60,121 @@
             <div class="foro-comentarios">
                 @foreach (var c in comentariosVisibles)
                 {
-                    var original = ObtenerOriginal(c);
                     <div class="comentario-row @(c.IdPersona == userId ? "comentario-propio" : "comentario-ajeno")">
                         <div class="comentario-card @(c.IdPersona == userId ? "comentario-card-propio" : "comentario-card-ajeno")">
-                        <div class="comentario-header">
-                            @if (c.IdPersona != userId)
-                            {
-                                <span class="comentario-autor">@c.NombrePersona</span>
-                            }
-                            <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
-                            <div class="comentario-acciones">
-                                @if (!c.Eliminado && c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
-                                {
-                                    <button type="button" class="btn-accion btn-editar" @onclick="@(() => IniciarEdicion(c))"><i class="bi bi-brush-fill"></i> Editar</button>
-                                    <button type="button" class="btn-accion btn-eliminar" @onclick="@(() => Eliminar(c))"><i class="bi bi-trash-fill"></i> Eliminar</button>
-                                }
+                            <div class="comentario-header">
                                 @if (c.IdPersona != userId)
                                 {
-                                    <button type="button" class="btn-accion" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill"></i> </button>
+                                    <span class="comentario-autor">@c.NombrePersona</span>
                                 }
-                            </div>
-                        </div>
-                        @if (idEditando == c.Id)
-                        {
-                            <div class="comentario-edicion">
-                                <textarea @bind="textoEditado" class="input-edicion" rows="3"></textarea>
-                                <div class="edicion-botones">
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="GuardarEdicion">Guardar</button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelarEdicion">Cancelar</button>
+                                <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
+                                <div class="comentario-acciones">
+                                    @if (!c.Eliminado && c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
+                                    {
+                                        <button type="button" class="btn-accion btn-editar" @onclick="@(() => IniciarEdicion(c))"><i class="bi bi-brush-fill"></i> Editar</button>
+                                        <button type="button" class="btn-accion btn-eliminar" @onclick="@(() => Eliminar(c))"><i class="bi bi-trash-fill"></i> Eliminar</button>
+                                    }
+                                    @if (c.IdPersona != userId)
+                                    {
+                                        <button type="button" class="btn-accion" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill"></i></button>
+                                    }
                                 </div>
                             </div>
-                        }
-                        else if (modoAuditoria && c.Eliminado)
-                        {
-                            <div class="mensaje-eliminado">
-                                <div class="etiqueta-eliminado">Eliminado</div>
-                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
-                            </div>
-                        }
-                        else if (modoAuditoria && c.Editado && original != null)
-                        {
-                            <div class="mensaje-original">
-                                <div class="etiqueta-original">Mensaje original</div>
-                                <div class="comentario-cuerpo">@ComentarioParaMostrar(original.Comentario)</div>
-                            </div>
-                            <div class="mensaje-editado">
-                                <div class="etiqueta-editado">Editado</div>
-                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
-                            </div>
-                        }
-                        else
-                        {
-                            @if (c.IdForoReferencia is int idRef && idRef > 0)
+                            @if (idEditando == c.Id)
                             {
-                                var refMsg = ObtenerMensajeReferencia(idRef);
-                                <div class="reply-quoted">
-                                    @if (refMsg != null)
+                                <div class="comentario-edicion">
+                                    <textarea @bind="textoEditado" class="input-edicion" rows="3"></textarea>
+                                    <div class="edicion-botones">
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="GuardarEdicion">Guardar</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelarEdicion">Cancelar</button>
+                                    </div>
+                                </div>
+                            }
+                            else if (c.Editado || c.Eliminado)
+                            {
+                                @if (modoAuditoria)
+                                {
+                                    @* Modo auditoría: en la misma card, mensaje original + todas las ediciones + último mensaje (o eliminado) *@
+                                    @if (historialPorComentario.TryGetValue(c.Id, out var timeline) && timeline.Count > 0)
                                     {
-                                        <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
-                                        <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
+                                        @foreach (var entrada in timeline)
+                                        {
+                                            @switch (entrada.TipoEntrada)
+                                            {
+                                                case "original":
+                                                    <div class="auditoria-bloque auditoria-original">
+                                                        <div class="auditoria-etiqueta"><i class="bi bi-file-earmark-text-fill"></i> Mensaje original</div>
+                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
+                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
+                                                    </div>
+                                                    break;
+                                                case "edicion":
+                                                    <div class="auditoria-bloque auditoria-edicion">
+                                                        <div class="auditoria-etiqueta"><i class="bi bi-pencil-fill"></i> Editado</div>
+                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
+                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
+                                                    </div>
+                                                    break;
+                                                case "eliminado":
+                                                    <div class="auditoria-bloque auditoria-eliminado">
+                                                        <div class="auditoria-etiqueta"><i class="bi bi-trash-fill"></i> Eliminado (último mensaje)</div>
+                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
+                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
+                                                    </div>
+                                                    break;
+                                            }
+                                        }
                                     }
                                     else
                                     {
-                                        <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
+                                        <div class="auditoria-bloque auditoria-sin-datos">
+                                            <i class="bi bi-exclamation-circle"></i> Sin historial disponible
+                                        </div>
                                     }
-                                </div>
-                                <div class="reply-response-label">Respuesta:</div>
+                                }
+                                else
+                                {
+                                    @* Auditoría desactivada: mostrar solo el último mensaje (mensaje editado actual) *@
+                                    @if (c.IdForoReferencia is int idRefNormal && idRefNormal > 0)
+                                    {
+                                        var refMsg = ObtenerMensajeReferencia(idRefNormal);
+                                        <div class="reply-quoted">
+                                            @if (refMsg != null)
+                                            {
+                                                <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
+                                                <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
+                                            }
+                                        </div>
+                                        <div class="reply-response-label">Respuesta:</div>
+                                    }
+                                    <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
+                                }
                             }
-                            <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
-                        }
+                            else
+                            {
+                                @* Mensaje sin editar ni eliminar *@
+                                @if (c.IdForoReferencia is int idRef && idRef > 0)
+                                {
+                                    var refMsg = ObtenerMensajeReferencia(idRef);
+                                    <div class="reply-quoted">
+                                        @if (refMsg != null)
+                                        {
+                                            <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
+                                            <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
+                                        }
+                                    </div>
+                                    <div class="reply-response-label">Respuesta:</div>
+                                }
+                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
+                            }
                         </div>
                     </div>
                 }
@@ -316,6 +362,56 @@
         font-weight: 600;
     }
     .etiqueta-eliminado { color: #c92a2a; }
+
+    /* Línea de tiempo auditoría (original → ediciones → eliminado) */
+    .auditoria-bloque {
+        border-radius: 6px;
+        padding: 0.45rem 0.65rem;
+        margin-top: 0.3rem;
+        position: relative;
+    }
+    .auditoria-bloque + .auditoria-bloque::before {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 0.4rem;
+        background: #ced4da;
+        margin: -0.3rem auto 0.1rem 0.7rem;
+    }
+    .auditoria-etiqueta {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .auditoria-cuerpo { font-size: 0.95rem; word-wrap: break-word; white-space: normal; }
+    .auditoria-fecha { font-size: 0.7rem; color: #868e96; margin-top: 0.2rem; }
+    .auditoria-original {
+        background: #f1f3f5;
+        border-left: 3px solid #adb5bd;
+    }
+    .auditoria-original .auditoria-etiqueta { color: #495057; }
+    .auditoria-edicion {
+        background: #e7f5ff;
+        border-left: 3px solid #339af0;
+    }
+    .auditoria-edicion .auditoria-etiqueta { color: #1971c2; }
+    .auditoria-eliminado {
+        background: #fff5f5;
+        border-left: 3px solid #fa5252;
+    }
+    .auditoria-eliminado .auditoria-etiqueta { color: #c92a2a; }
+    .auditoria-sin-datos {
+        background: #fff9db;
+        border-left: 3px solid #fcc419;
+        color: #856404;
+        font-size: 0.85rem;
+    }
+
     .comentario-edicion { margin-top: 0.5rem; }
     .input-edicion { width: 100%; padding: 0.5rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
     .edicion-botones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
@@ -575,8 +671,8 @@
     {
         // En plataforma académica usamos la vista de docente (incluye eliminados)
         comentarios = await ForoService.ObtenerPorAsignacionDocenteAsync(IdAsignacionAcademica);
-        if (modoAuditoria)
-            await CargarHistorialesAuditoria();
+        // Siempre cargar historial de mensajes editados/eliminados para mostrar en la card
+        await CargarHistorialesParaMensajesConCambios();
     }
 
     private IEnumerable<ForoDto> comentariosVisibles =>
@@ -585,28 +681,22 @@
     private async Task OnAuditoriaChanged(ChangeEventArgs e)
     {
         modoAuditoria = e.Value as bool? ?? false;
-        if (modoAuditoria)
-            await CargarHistorialesAuditoria();
-        else
-            historialPorComentario.Clear();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CargarHistorialesAuditoria()
+    /// <summary>Carga el historial (original, ediciones, eliminado) para mensajes editados o eliminados.</summary>
+    private async Task CargarHistorialesParaMensajesConCambios()
     {
         historialPorComentario.Clear();
-        var ids = comentarios.Where(c => c.Editado).Select(c => c.Id).Distinct().ToList();
+        var ids = comentarios
+            .Where(c => c.Editado || c.Eliminado)
+            .Select(c => c.Id)
+            .Distinct()
+            .ToList();
         foreach (var id in ids)
         {
             historialPorComentario[id] = await ForoService.ObtenerHistorialAsync(id);
         }
-    }
-
-    private ForoHistorialDto? ObtenerOriginal(ForoDto c)
-    {
-        if (!historialPorComentario.ContainsKey(c.Id))
-            return null;
-        return historialPorComentario[c.Id].OrderBy(h => h.Fecha).FirstOrDefault();
     }
 
     /// <summary>Título del foro como en el h1: Nombre (Grupo).</summary>

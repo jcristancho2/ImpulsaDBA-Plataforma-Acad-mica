@@ -307,7 +307,7 @@
     private string MensajeProcesos = "";
     private bool esModoEdicion => ActividadEditar != null;
     private bool modoSoloLectura = false;
-    private const int TIPO_ACTIVIDAD_EVALUACION = 17; // ID de Evaluación en tab.tipo_recurso
+    private const int tipo_recurso_EVALUACION = 17; // ID de Evaluación en tipo_recurso
 
     protected override async Task OnParametersSetAsync()
     {
@@ -455,7 +455,7 @@
                     Titulo = actividad.Titulo,
                     Descripcion = actividad.Descripcion ?? string.Empty,
                     Hipertexto = actividad.Descripcion, // Las instrucciones adicionales van en hipertexto
-                    TipoActividadId = TIPO_ACTIVIDAD_EVALUACION,
+                    TipoActividadId = tipo_recurso_EVALUACION,
                     AsignacionAcademicaId = IdAsignacionAcademica,
                     PeriodoId = periodoId,
                     AnioId = anioId

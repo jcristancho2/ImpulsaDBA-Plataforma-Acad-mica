@@ -194,10 +194,13 @@
     }
     
     /// <summary>
-    /// Obtiene la clase activa para el botón del sidebar
+    /// Obtiene la clase activa para el botón del sidebar.
+    /// Si estamos en la ruta del foro, ninguna de las vistas (inicio, asignaturas, etc.) debe verse activa.
     /// </summary>
     private string GetVistaActiveClass(string vista)
     {
+        if (EsRutaActivaForo())
+            return "";
         return vistaActual == vista ? "active" : "";
     }
 
