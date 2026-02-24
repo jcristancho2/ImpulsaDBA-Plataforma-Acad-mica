@@ -82,7 +82,7 @@
                             @foreach (var actividad in dia.Actividades)
                             {
                                 <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
-                                     style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"
+                                     style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
                                      title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
                                      draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
                                      data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
@@ -129,7 +129,7 @@
                             @foreach (var actividad in dia.Actividades.Take(2))
                             {
                                 <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
-                                     style="background-color: @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"
+                                     style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
                                      title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
                                      draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
                                      data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
@@ -219,12 +219,12 @@
                             @foreach (var actividad in actividadesDia)
                             {
                             <div class="actividad-dia-card @ObtenerClaseColor(actividad.IdTipoActividad)"
-                                 style="border-left: 4px solid @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"
+                                 style="border-left: 4px solid @ObtenerColorActividad(actividad);"
                                  title="@ObtenerTextoActividad(actividad)"
                                  @onclick="() => OnActividadClick(actividad)">
                                 <div class="actividad-dia-header">
                                     <div class="actividad-dia-tipo">
-                                        <i class="bi bi-circle-fill" style="color: @ObtenerColorActividad(actividad.IdTipoActividad, actividad.Eliminado);"></i>
+                                        <i class="bi bi-circle-fill" style="color: @ObtenerColorActividad(actividad);"></i>
                                         <span class="actividad-dia-nombre">@actividad.TipoActividad</span>
                                     </div>
                                     @if (actividad.FechaFinal.HasValue && actividad.FechaFinal.Value.Date != actividad.FechaInicio.Date)
@@ -2067,14 +2067,42 @@
     /// #c4f9d8: Video de enganche (1), Tareas (4), Trabajos (5), Talleres (6), Investigación (7), Proyecto (8), Actividad Práctica (9)
     /// #ffcea9: Preguntas problematizadoras (2), Presentaciones (11), Documentos (12), Recurso de Lectura (13), Resumen de Clase (16), Clase Virtual (14)
     /// </summary>
-    private string ObtenerColorActividad(int idTipoActividad, bool eliminado = false)
+    private string ObtenerColorActividad(ActividadCalendarioDto actividad)
     {
         // Si la actividad está eliminada/invisible, mostrar en gris
-        if (eliminado)
+        if (actividad.Eliminado)
         {
             return "#808080"; // Gris para actividades invisibles
         }
-        
+
+        // Priorizar color configurado en BD (paleta_actividad)
+        var colorDb = NormalizarColorHex(actividad.ColorBackHexa);
+        if (!string.IsNullOrWhiteSpace(colorDb))
+        {
+            return colorDb;
+        }
+
+        return ObtenerColorPorTipoFallback(actividad.IdTipoActividad);
+    }
+
+    private string ObtenerColorTextoActividad(ActividadCalendarioDto actividad)
+    {
+        if (actividad.Eliminado)
+        {
+            return "#ffffff";
+        }
+
+        var colorTextoDb = NormalizarColorHex(actividad.ColorTextHexa);
+        if (!string.IsNullOrWhiteSpace(colorTextoDb))
+        {
+            return colorTextoDb;
+        }
+
+        return "#000000";
+    }
+
+    private string ObtenerColorPorTipoFallback(int idTipoActividad)
+    {
         return idTipoActividad switch
         {
             1 or 4 or 5 or 6 or 7 or 8 or 9 => "#c4f9d8", // Video de enganche, Tareas, Trabajos, Talleres, Investigación, Proyecto, Actividad Práctica
@@ -2082,6 +2110,22 @@
             17 => "#d0ddff", // Evaluación
             _ => "#e0e0e0" // Color por defecto (gris claro)
         };
+    }
+
+    private static string? NormalizarColorHex(string? color)
+    {
+        if (string.IsNullOrWhiteSpace(color))
+        {
+            return null;
+        }
+
+        var valor = color.Trim();
+        if (valor.StartsWith("#"))
+        {
+            return valor;
+        }
+
+        return $"#{valor}";
     }
 
     /// <summary>
