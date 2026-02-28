@@ -52,7 +52,7 @@
 </div>
 
 <style>
-    .foro-list-page { max-width: 1100px; margin: 0 auto; }
+    .foro-list-page { max-width: 1100px; margin: 0.5rem auto; overflow-y: auto; }
     .page-header-asignaturas { margin-bottom: 1.5rem; }
     .page-header-asignaturas h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 0.25rem 0; }
     .page-header-asignaturas .subtitle { color: #666; margin: 0; font-size: 0.95rem; }
@@ -60,14 +60,45 @@
     .loading-asignaturas .spinner { width: 40px; height: 40px; border: 3px solid #dee2e6; border-top-color: var(--color-primary, #0d6efd); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @@keyframes spin { to { transform: rotate(360deg); } }
     .sin-asignaturas .icon-empty { font-size: 3rem; color: #adb5bd; margin-bottom: 0.5rem; }
-    .asignaturas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
-    .card-foro { display: block; transition: box-shadow 0.2s ease, transform 0.2s ease; }
+    .asignaturas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.25rem;
+        align-items: stretch;
+        grid-auto-rows: 1fr;
+        max-height: calc(100vh - 12rem);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .card-foro { display: flex; flex-direction: column; height: 100%; transition: box-shadow 0.2s ease, transform 0.2s ease; }
     .card-foro:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
-    .card-asignatura { position: relative; background: var(--color-bg-primary, #fff); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid var(--color-border, #e9ecef); }
-    .card-asignatura-accent { height: 4px; background: var(--card-accent, #e0e0e0); }
-    .card-asignatura-body { padding: 1.25rem; }
+    .card-asignatura {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 100px;
+        position: relative;
+        background: var(--color-bg-primary, #fff);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+        border: 1px solid var(--color-border, #e9ecef);
+    }
+    .card-asignatura-accent { height: 4px; background: var(--card-accent, #e0e0e0); flex-shrink: 0; }
+    .card-asignatura-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
     .card-asignatura-titulo { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.75rem 0; }
-    .card-asignatura-meta { display: flex; flex-direction: column; gap: 0.35rem; }
+    .card-asignatura-meta {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 0.35rem;
+        margin-top: auto;
+    }
     .card-asignatura-meta .meta-item { font-size: 0.9rem; color: var(--color-text-secondary, #555); display: flex; align-items: center; gap: 0.5rem; }
 </style>
 

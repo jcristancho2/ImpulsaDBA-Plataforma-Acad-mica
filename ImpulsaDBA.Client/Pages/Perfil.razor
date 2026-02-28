@@ -1,0 +1,159 @@
+@page "/dashboard/perfil"
+@layout DashboardLayout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Mi perfil - ImpulsaDBA</PageTitle>
+
+<div class="perfil-page">
+    <div class="perfil-header">
+        <h1>Mi perfil</h1>
+        <p class="perfil-subtitle">Perfil de docente</p>
+    </div>
+
+    <div class="perfil-card">
+        <div class="perfil-avatar-section">
+            @if (TieneFoto())
+            {
+                <img src="@GetFotoUrl()" alt="Foto" class="perfil-avatar" />
+            }
+            else
+            {
+                <div class="perfil-avatar perfil-avatar-iniciales">@GetIniciales()</div>
+            }
+        </div>
+        <div class="perfil-info">
+            <h2 class="perfil-nombre">@GetNombreCompleto()</h2>
+            <p class="perfil-rol">Docente</p>
+            @if (!string.IsNullOrWhiteSpace(GetEmail()))
+            {
+                <p class="perfil-email"><i class="bi bi-envelope"></i> @GetEmail()</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .perfil-page {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .perfil-header {
+        margin-bottom: 2rem;
+    }
+
+    .perfil-header h1 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .perfil-subtitle {
+        color: var(--color-text-secondary);
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .perfil-card {
+        background-color: var(--color-bg-primary);
+        border-radius: var(--border-radius-lg);
+        box-shadow: 0 2px 8px var(--color-shadow);
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .perfil-avatar-section {
+        flex-shrink: 0;
+    }
+
+    .perfil-avatar {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .perfil-avatar-iniciales {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-primary);
+        color: white;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+
+    .perfil-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .perfil-nombre {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .perfil-rol {
+        color: var(--color-text-secondary);
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+    }
+
+    .perfil-email {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--color-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+
+@code {
+    private AuthenticationState? authState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        authState = await AuthStateProvider.GetAuthenticationStateAsync();
+    }
+
+    private bool TieneFoto()
+    {
+        return !string.IsNullOrWhiteSpace(GetFotoUrl());
+    }
+
+    private string GetFotoUrl()
+    {
+        return authState?.User?.FindFirst("FotoUrl")?.Value ?? string.Empty;
+    }
+
+    private string GetIniciales()
+    {
+        var nombre = GetNombreCompleto();
+        if (string.IsNullOrWhiteSpace(nombre) || nombre == "Usuario") return "U";
+        var parts = nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        return nombre[0].ToString().ToUpperInvariant();
+    }
+
+    private string GetNombreCompleto()
+    {
+        return authState?.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Usuario";
+    }
+
+    private string GetEmail()
+    {
+        return authState?.User?.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+    }
+}

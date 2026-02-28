@@ -38,45 +38,6 @@
         <div class="page-header">
             <div class="page-header-left">
                 <h1>Calendario Académico</h1>
-                <div class="filtros-container">
-                    <div class="filtro-item">
-                        <label for="select-tipo-filtro">Tipo de vista:</label>
-                        <select id="select-tipo-filtro" class="select-filtro" @onchange="OnTipoFiltroChange">
-                            <option value="asignaturas" selected="@(tipoFiltro == "asignaturas")">Mis Asignaturas</option>
-                            <option value="grupo" selected="@(tipoFiltro == "grupo")">Por Grupo (Todos los docentes)</option>
-                        </select>
-                    </div>
-                    @if (tipoFiltro == "asignaturas")
-                    {
-                        <div class="filtro-item">
-                            <label for="select-asignatura">Filtrar por asignatura:</label>
-                            <select id="select-asignatura" class="select-filtro" @onchange="OnAsignaturaChange">
-                                <option value="0">Todas las asignaturas</option>
-                                @foreach (var asignatura in asignaturasFiltradas)
-                                {
-                                    <option value="@asignatura.IdAsignacionAcademica" selected="@(asignaturaSeleccionada?.IdAsignacionAcademica == asignatura.IdAsignacionAcademica)">
-                                        @asignatura.Nombre - @asignatura.Grupo
-                                    </option>
-                                }
-                            </select>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="filtro-item">
-                            <label for="select-grupo">Filtrar por grupo:</label>
-                            <select id="select-grupo" class="select-filtro" @onchange="OnGrupoChange">
-                                <option value="0">Seleccione un grupo</option>
-                                @foreach (var grupo in gruposDisponibles)
-                                {
-                                    <option value="@grupo.GrupoId" selected="@(grupoSeleccionado?.GrupoId == grupo.GrupoId)">
-                                        @grupo.NombreGrupo
-                                    </option>
-                                }
-                            </select>
-                        </div>
-                    }
-                </div>
             </div>
             <div class="page-header-right">
                 <Ayudas IdComponente="105" />
@@ -90,7 +51,55 @@
                                 OnDiaSeleccionado="OnDiaClick"
                                 OnActividadSeleccionada="OnActividadClick"
                                 OnActividadEliminada="RecargarCalendarioDespuesEliminar"
-                                @ref="calendarioComponentRef" />
+                                @ref="calendarioComponentRef">
+                <HeaderFilters>
+                    <div class="filtros-container">
+                        <div class="filtro-item filtro-tipo-vista">
+                            <span class="filtro-tipo-vista-label">Vista:</span>
+                            <div class="filtro-tipo-vista-radios">
+                                <label class="filtro-tipo-vista-radio">
+                                    <input type="radio" name="tipoFiltro" value="grupo" checked="@(tipoFiltro == "grupo")" @onchange="@(() => OnTipoFiltroChange("grupo"))" />
+                                    <span>Por grupos</span>
+                                </label>
+                                <label class="filtro-tipo-vista-radio">
+                                    <input type="radio" name="tipoFiltro" value="asignaturas" checked="@(tipoFiltro == "asignaturas")" @onchange="@(() => OnTipoFiltroChange("asignaturas"))" />
+                                    <span>Mis Asignaturas</span>
+                                </label>
+                            </div>
+                        </div>
+                        @if (tipoFiltro == "asignaturas")
+                        {
+                            <div class="filtro-item">
+                                <label for="select-asignatura"></label>
+                                <select id="select-asignatura" class="select-filtro" @onchange="OnAsignaturaChange">
+                                    <option value="0">Todas las asignaturas</option>
+                                    @foreach (var asignatura in asignaturasFiltradas)
+                                    {
+                                        <option value="@asignatura.IdAsignacionAcademica" selected="@(asignaturaSeleccionada?.IdAsignacionAcademica == asignatura.IdAsignacionAcademica)">
+                                            @asignatura.Nombre - @asignatura.Grupo
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="filtro-item">
+                                <label for="select-grupo"></label>
+                                <select id="select-grupo" class="select-filtro" @onchange="OnGrupoChange">
+                                    <option value="0">Seleccione un grupo</option>
+                                    @foreach (var grupo in gruposDisponibles)
+                                    {
+                                        <option value="@grupo.GrupoId" selected="@(grupoSeleccionado?.GrupoId == grupo.GrupoId)">
+                                            @grupo.NombreGrupo
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                </HeaderFilters>
+            </CalendarioComponent>
         </div>
     }
 </div>
@@ -169,8 +178,14 @@
 
 <style>
     .calendario-page {
-        max-width: 1400px;
-        margin: 0 auto;
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .page-header {
@@ -201,31 +216,68 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 1.5rem;
-        margin-top: 1rem;
+        justify-content: center;
+        width: 100%;
+
     }
 
     .filtro-item {
         display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+        flex-direction: row;
+        gap: 0.25rem;
+
     }
 
     .filtros-container label {
         font-weight: 500;
         color: var(--color-text-primary);
+        font-size: 0.6rem;
+
+    }
+
+    .filtro-tipo-vista {
+        display: flex;
+        flex-direction: row;
+        gap: 0.35rem;
+    }
+
+    .filtro-tipo-vista-label {
+        font-weight: 500;
+        color: var(--color-text-primary);
+        font-size: 0.6rem;
+    }
+
+    .filtro-tipo-vista-radios {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.1rem;
+    }
+
+    .filtro-tipo-vista-radio {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
         font-size: 0.9rem;
+        color: var(--color-text-primary);
+    }
+
+    .filtro-tipo-vista-radio input {
+        cursor: pointer;
+        width: 1rem;
+        height: 1rem;
     }
 
     .select-filtro {
-        padding: 0.5rem 1rem;
+        padding: 0.25rem 0.5rem;
         border: 1px solid var(--color-border);
         border-radius: var(--border-radius-md);
         background-color: var(--color-bg-primary);
         color: var(--color-text-primary);
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         cursor: pointer;
-        min-width: 250px;
+        min-width: 200px;
     }
 
     .select-filtro:focus {
@@ -234,7 +286,12 @@
     }
 
     .calendario-wrapper {
-        margin-top: 2rem;
+        flex: 1;
+        min-height: 0;
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .loading-container {
@@ -302,7 +359,7 @@
     
     private List<GrupoInfo> gruposDisponibles = new();
     private GrupoInfo? grupoSeleccionado;
-    private string tipoFiltro = "asignaturas"; // "asignaturas" o "grupo"
+    private string tipoFiltro = "asignaturas"; // "asignaturas" o "grupo" (igual que app estudiante)
     
     private int idAsignacionAcademicaActual = 0;
     private bool isLoading = true;
@@ -379,10 +436,14 @@
                 }
                 if (asignaturaSeleccionada == null && asignaturas.Count > 0)
                 {
-                    // Si no hay asignatura en query, usar la primera
                     asignaturaSeleccionada = asignaturas.First();
                     idAsignacionAcademicaActual = asignaturaSeleccionada.IdAsignacionAcademica;
                     grupoSeleccionado = gruposDisponibles.FirstOrDefault(g => g.GrupoId == asignaturaSeleccionada.GrupoId);
+                }
+                // Por defecto vista por grupos: asegurar un grupo seleccionado
+                if (tipoFiltro == "grupo" && grupoSeleccionado == null && gruposDisponibles.Count > 0)
+                {
+                    grupoSeleccionado = gruposDisponibles.First();
                 }
             }
         }
@@ -396,19 +457,17 @@
         }
     }
 
-    private void OnTipoFiltroChange(ChangeEventArgs e)
+    private void OnTipoFiltroChange(string value)
     {
-        tipoFiltro = e.Value?.ToString() ?? "asignaturas";
+        tipoFiltro = value ?? "asignaturas";
         
         if (tipoFiltro == "grupo")
         {
-            // Limpiar selección de asignatura cuando se cambia a filtro por grupo
             asignaturaSeleccionada = null;
             idAsignacionAcademicaActual = 0;
         }
         else
         {
-            // Restaurar selección de asignatura si existe
             if (asignaturas.Count > 0 && asignaturaSeleccionada == null)
             {
                 asignaturaSeleccionada = asignaturas.First();

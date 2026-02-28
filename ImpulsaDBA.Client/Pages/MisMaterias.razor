@@ -41,13 +41,14 @@
                 <Ayudas IdComponente="103" />
             </div>
         </div>
-
+    <div class="asignaturas-container">
         <div class="asignaturas-grid">
             @foreach (var asignatura in asignaturas)
             {
                 <CardAsignatura Asignatura="asignatura" OnClick="OnAsignaturaClick" />
             }
         </div>
+    </div>
     }
 </div>
 
@@ -93,6 +94,12 @@
     .asignaturas-count {
         font-weight: 500;
         color: var(--color-text-primary);
+    }
+
+    .asignaturas-container {
+        max-height: calc(100vh - 12rem);
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .asignaturas-grid {

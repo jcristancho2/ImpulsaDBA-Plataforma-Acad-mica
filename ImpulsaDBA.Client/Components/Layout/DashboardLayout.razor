@@ -9,20 +9,57 @@
 @inject ILocalStorageService LocalStorage
 @inject AsignaturaService AsignaturaService
 
-<div class="dashboard-container">
+<div class="dashboard-container @(isCollapsed ? "sidebar-collapsed" : "")">
     <!-- Sidebar -->
     <aside class="dashboard-sidebar @(isCollapsed ? "collapsed" : "")">
-        <div class="sidebar-header">
+        <div class="sidebar-header @(isCollapsed ? "sidebar-header-expandable" : "")" title="@(isCollapsed ? "Clic para expandir menú" : nombreInstitucion)" @onclick="() => { if (isCollapsed) ToggleSidebar(); }">
             <div class="sidebar-logo">
-                <div class="logo-icon">M</div>
+                @if (!string.IsNullOrWhiteSpace(logoInstitucionUrl))
+                {
+                    <img src="@logoInstitucionUrl" alt="Logo institución" class="sidebar-logo-img" />
+                }
+                else
+                {
+                    <div class="logo-icon">@(nombreInstitucion.Length > 0 ? nombreInstitucion[0].ToString().ToUpperInvariant() : "M")</div>
+                }
             </div>
-            <div class="sidebar-title">Menú</div>
-            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="@(isCollapsed ? "Expandir" : "Colapsar")">
+            <div class="sidebar-title">@FormatInstitutionName(nombreInstitucion)</div>
+            <button class="sidebar-toggle" @onclick="ToggleSidebar" @onclick:stopPropagation="true" title="@(isCollapsed ? "Expandir" : "Colapsar")">
                 <span class="toggle-icon">@(isCollapsed ? "→" : "←")</span>
             </button>
         </div>
         
         <nav class="sidebar-nav">
+            <div class="sidebar-estudiante-wrap">
+                <button type="button" class="sidebar-estudiante-trigger" @onclick="TogglePanelEstudiante" title="@(estudiantePanelOpen ? "Ocultar perfil" : "Ver mi perfil")">
+                    <i class="bi bi-person-circle nav-icon"></i>
+                    <span class="nav-text">Mi perfil</span>
+                    <span class="nav-item-tooltip">Mi perfil</span>
+                    <i class="bi @(estudiantePanelOpen ? "bi-chevron-up" : "bi-chevron-down") nav-chevron"></i>
+                </button>
+
+                @if (estudiantePanelOpen)
+                {
+                    <div class="sidebar-estudiante-panel">
+                        <div class="sidebar-estudiante-avatar-wrap">
+                            @if (TieneFotoPerfil())
+                            {
+                                <img src="@GetFotoPerfil()" alt="Foto" class="sidebar-estudiante-avatar" />
+                            }
+                            else
+                            {
+                                <div class="sidebar-estudiante-avatar-iniciales">@GetInicialesPerfil()</div>
+                            }
+                            <span class="sidebar-estudiante-led" title="En línea" aria-label="En línea"></span>
+                        </div>
+
+                        <div class="sidebar-estudiante-info">
+                            <div class="sidebar-estudiante-name">@GetNombreCompletoPerfil()</div>
+                            <div class="sidebar-estudiante-curso">Docente</div>
+                        </div>
+                    </div>
+                }
+            </div>
             <button class="nav-item @GetVistaActiveClass("inicio")" @onclick="@(() => MostrarVista("inicio"))">
                 <i class="bi bi-house-fill nav-icon"></i>
                 <span class="nav-text">Inicio</span>
@@ -64,21 +101,39 @@
         <!-- Header -->
         <header class="dashboard-header">
             <div class="header-left">
-                @*<div class="search-container">
-                    <i class="bi bi-search search-icon"></i>
-                    <input type="text" class="search-input" placeholder="Buscar asignaturas..." />
-                </div>*@
+                <nav class="breadcrumb" aria-label="Migas de pan">
+                    @{
+                        var crumbs = GetBreadcrumbs();
+                        var last = crumbs.Count - 1;
+                    }
+                    @for (var i = 0; i < crumbs.Count; i++)
+                    {
+                        var (label, path, _) = crumbs[i];
+                        if (i > 0)
+                        {
+                            <span class="breadcrumb-sep" aria-hidden="true">/</span>
+                        }
+                        @if (i == last)
+                        {
+                            <span class="breadcrumb-current" aria-current="page">@label</span>
+                        }
+                        else
+                        {
+                            <a href="@path" class="breadcrumb-link">@label</a>
+                        }
+                    }
+                </nav>
             </div>
 
-            <div class="header-center">
-                @if (authState != null && authState.User.Identity?.IsAuthenticated == true)
-                {
-                    <div class="user-info">
-                        <span class="user-role">Docente</span>
-                        <span class="user-name">@GetUserName()</span>
-                        <span class="user-institution">@GetUserInstitution()</span>
-                    </div>
-                }
+            <div class="header-right">
+                <button type="button" class="header-icon-btn" title="Notificaciones" aria-label="Notificaciones">
+                    <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                    <span class="tooltip-text">Notificaciones</span>
+                </button>
+                <button type="button" class="header-icon-btn" title="Correo interno" aria-label="Correo interno">
+                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                    <span class="tooltip-text">Correo interno</span>
+                </button>
             </div>
         </header>
 
@@ -97,10 +152,16 @@
     private AuthenticationState? authState;
     private bool isCollapsed = true;
     private const string SIDEBAR_STATE_KEY = "sidebar_collapsed";
-    private string nombreInstitucion = "INSTITUCIÓN EDUCATIVA";
+    /// <summary>Nombre de la institución. Se carga desde la base de datos en OnInitializedAsync (campo Institucion de las asignaturas del profesor).</summary>
+    private string nombreInstitucion = "Instituto Los Libertadores";
+    /// <summary>URL de la imagen/logo de la institución (ej: /images/logo-institucion.png). Si está vacío, se muestra la inicial del nombre.</summary>
+    private string? logoInstitucionUrl = "https://www.ielibertadores.edu.co/sites/institucion-educativa-los-libertadores/content/files/000021/1005_escudo-iel_200x200.png"; // Asignar ej: "/images/logo-institucion.png" o desde configuración
     
     // Estado para controlar qué vista mostrar en el Dashboard
     private string vistaActual = "inicio"; // Vista por defecto según pendientes.md punto 2
+
+    // Panel perfil docente (colapsable, igual que app estudiante)
+    private bool estudiantePanelOpen = false;
 
     protected override void OnParametersSet()
     {
@@ -153,6 +214,30 @@
         {
             Console.WriteLine($"Error al obtener nombre de institución: {ex.Message}");
         }
+    }
+
+    private void TogglePanelEstudiante()
+    {
+        estudiantePanelOpen = !estudiantePanelOpen;
+        StateHasChanged();
+    }
+
+    private bool TieneFotoPerfil()
+    {
+        return !string.IsNullOrWhiteSpace(GetUserPhotoUrl());
+    }
+
+    private string GetFotoPerfil() => GetUserPhotoUrl();
+
+    private string GetInicialesPerfil()
+    {
+        return GetUserInitials();
+    }
+
+    /// <summary>Nombre completo del docente (tal como viene del claim).</summary>
+    private string GetNombreCompletoPerfil()
+    {
+        return authState?.User?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Usuario";
     }
 
     private async Task ToggleSidebar()
@@ -209,6 +294,53 @@
         var path = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.TrimEnd('/');
         return path.StartsWith("/dashboard/foro", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>Genera las migajas de pan según la ruta actual.</summary>
+    private List<(string Label, string Path, bool IsLast)> GetBreadcrumbs()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var path = uri.AbsolutePath.TrimEnd('/');
+        if (string.IsNullOrEmpty(path) || path == "/")
+        {
+            return new List<(string, string, bool)> { ("Dashboard", "/dashboard/inicio", true) };
+        }
+
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            return new List<(string, string, bool)> { ("Dashboard", "/dashboard/inicio", true) };
+        }
+
+        var result = new List<(string Label, string Path, bool IsLast)>();
+        var acc = "";
+        for (var i = 0; i < segments.Length; i++)
+        {
+            acc += "/" + segments[i];
+            var segment = segments[i].ToLowerInvariant();
+            var label = ObtenerEtiquetaRuta(segment, i > 0 ? segments[i - 1].ToLowerInvariant() : null);
+            var pathForLink = acc;
+            if (i == 0 && segment == "dashboard" && segments.Length > 1)
+                pathForLink = "/dashboard/inicio";
+            result.Add((label, pathForLink, i == segments.Length - 1));
+        }
+        return result;
+    }
+
+    private static string ObtenerEtiquetaRuta(string segment, string? segmentAnterior)
+    {
+        return segment switch
+        {
+            "dashboard" => "Dashboard",
+            "inicio" => "Inicio",
+            "calendario" => "Calendario",
+            "asignaturas" => "Mis Asignaturas",
+            "foro" => "Foro",
+            "duplicar-actividades" => "Duplicar actividades",
+            "calificar-actividades" => "Calificar actividades",
+            "perfil" => "Mi perfil",
+            _ => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(segment.Replace("-", " "))
+        };
+    }
     
     /// <summary>
     /// Método público para cambiar la vista desde componentes hijos
@@ -261,6 +393,38 @@
     private string GetUserInstitution()
     {
         return nombreInstitucion;
+    }
+
+    private static MarkupString FormatInstitutionName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return new MarkupString("");
+
+        var prefixes = new[]
+        {
+            "INSTITUCION EDUCATIVA",
+            "INSTITUCIÓN EDUCATIVA",
+            "COLEGIO",
+            "ESCUELA"
+        };
+
+        var upper = name.ToUpperInvariant();
+
+        foreach (var prefix in prefixes)
+        {
+            if (upper.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && name.Length >= prefix.Length)
+            {
+                var prefixDisplay = name.Substring(0, prefix.Length).Trim();
+                var main = name.Substring(prefix.Length).Trim();
+                var prefixEnc = System.Net.WebUtility.HtmlEncode(prefixDisplay);
+                var mainEnc = System.Net.WebUtility.HtmlEncode(main);
+                var html = $"<span class='sidebar-subtitle'>{prefixEnc}</span><span class='sidebar-main-title'>{mainEnc}</span>";
+                return new MarkupString(html);
+            }
+        }
+
+        var nameEnc = System.Net.WebUtility.HtmlEncode(name);
+        return new MarkupString($"<span class='sidebar-main-title'>{nameEnc}</span>");
     }
 
     private string GetUserPhotoUrl()

@@ -12,6 +12,8 @@
 @implements IDisposable
 
 <div class="calendario-container">
+    <div class="calendario-layout">
+        <div class="calendario-main">
     <!-- Header del Calendario -->
     <div class="calendario-header">
         <div class="calendario-header-left">
@@ -25,6 +27,12 @@
                 <i class="bi bi-chevron-right"></i>
             </button>
         </div>
+        @if (HeaderFilters != null)
+        {
+            <div class="calendario-header-filtros">
+                @HeaderFilters
+            </div>
+        }
         <div class="calendario-vistas">
             <button class="btn-vista @(vistaActual == VistaCalendario.Dia ? "activa" : "")" 
                     @onclick="() => CambiarVista(VistaCalendario.Dia)">
@@ -41,25 +49,21 @@
                 <i class="bi bi-calendar-month"></i>
                 <span>Mes</span>
             </button>
-            <button class="btn-vista @(vistaActual == VistaCalendario.Año ? "activa" : "")" 
-                    @onclick="() => CambiarVista(VistaCalendario.Año)">
-                <i class="bi bi-calendar"></i>
-                <span>Año</span>
-            </button>
         </div>
     </div>
 
+    <div class="calendario-vista-wrap">
     @if (vistaActual == VistaCalendario.Semana)
     {
         <!-- Vista Semanal -->
         <div class="calendario-dias-semana">
-            <div class="dia-semana">L</div>
-            <div class="dia-semana">M</div>
-            <div class="dia-semana">X</div>
-            <div class="dia-semana">J</div>
-            <div class="dia-semana">V</div>
-            <div class="dia-semana">S</div>
-            <div class="dia-semana">D</div>
+            <div class="dia-semana">Lunes</div>
+            <div class="dia-semana">Martes</div>
+            <div class="dia-semana">Miércoles</div>
+            <div class="dia-semana">Jueves</div>
+            <div class="dia-semana">Viernes</div>
+            <div class="dia-semana">Sábado</div>
+            <div class="dia-semana">Domingo</div>
         </div>
         <div class="calendario-grid calendario-semana">
             @foreach (var dia in diasSemana)
@@ -89,7 +93,10 @@
                                      data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
                                      @onclick="() => OnActividadClick(actividad)"
                                      @onclick:stopPropagation="true">
-                                    <span class="actividad-texto">@ObtenerTextoEtiqueta(actividad)</span>
+                                    <span class="actividad-texto">
+                                        <span class="actividad-texto-hora">@actividad.FechaInicio.ToString("HH:mm")</span>
+                                        <span class="actividad-texto-label">@ObtenerTextoEtiqueta(actividad)</span>
+                                    </span>
                                 </div>
                             }
                         </div>
@@ -102,53 +109,58 @@
     {
         <!-- Vista Mensual -->
         <div class="calendario-dias-semana">
-            <div class="dia-semana">L</div>
-            <div class="dia-semana">M</div>
-            <div class="dia-semana">X</div>
-            <div class="dia-semana">J</div>
-            <div class="dia-semana">V</div>
-            <div class="dia-semana">S</div>
-            <div class="dia-semana">D</div>
+            <div class="dia-semana">Lunes</div>
+            <div class="dia-semana">Martes</div>
+            <div class="dia-semana">Miércoles</div>
+            <div class="dia-semana">Jueves</div>
+            <div class="dia-semana">Viernes</div>
+            <div class="dia-semana">Sábado</div>
+            <div class="dia-semana">Domingo</div>
         </div>
         <div class="calendario-grid">
             @foreach (var dia in diasCalendario)
             {
                 <div class="calendario-dia 
-                            @(dia.EsDelMesActual ? "" : "dia-otro-mes") 
+                            @(dia.EsVacio ? "dia-vacio" : (dia.EsDelMesActual ? "" : "dia-otro-mes")) 
                             @(dia.EsHoy ? "dia-hoy" : "") 
                             @(dia.EsPasado ? "dia-pasado" : "")
                             @(dia.EsFestivo ? "dia-festivo" : "")
                             @(dia.TieneActividades ? "dia-con-actividades" : "")"
                      data-drop-day
                      data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
-                     @onclick="() => OnDiaClick(dia.Fecha)">
-                    <span class="dia-numero">@dia.Fecha.Day</span>
-                    @if (dia.TieneActividades && dia.Actividades.Any())
+                     @onclick="() => OnDiaCalendarioClick(dia)">
+                    @if (!dia.EsVacio)
                     {
-                        <div class="actividades-lista-mensual">
-                            @foreach (var actividad in dia.Actividades.Take(2))
-                            {
-                                <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
-                                     style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
-                                     title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
-                                     draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                     data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                     data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
-                                     @onclick="() => OnActividadClick(actividad)"
-                                     @onclick:stopPropagation="true">
-                                    <span class="actividad-texto">@ObtenerTextoEtiqueta(actividad)</span>
-                                </div>
-                            }
-                            @if (dia.Actividades.Count > 2)
-                            {
-                                <div class="actividad-item actividad-mas" 
-                                     title="@string.Join("\n", dia.Actividades.Skip(2).Select(a => ObtenerTextoActividad(a)))"
-                                     @onclick="() => OnActividadClick(dia.Actividades.Skip(2).First())"
-                                     @onclick:stopPropagation="true">
-                                    <span class="actividad-texto">+@(dia.Actividades.Count - 2)</span>
-                                </div>
-                            }
-                        </div>
+                        <span class="dia-numero">@dia.Fecha.Day</span>
+                        @if (dia.TieneActividades && dia.Actividades.Any())
+                        {
+                            <div class="actividades-lista-mensual">
+                                @foreach (var actividad in dia.Actividades.Take(2))
+                                {
+                                    <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
+                                         style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
+                                         title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
+                                         draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                         data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                         data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
+                                         @onclick="() => OnActividadClick(actividad)"
+                                         @onclick:stopPropagation="true">
+                                        <span class="actividad-texto">
+                                            <span class="actividad-texto-label">@ObtenerTextoEtiqueta(actividad)</span>
+                                        </span>
+                                    </div>
+                                }
+                                @if (dia.Actividades.Count > 2)
+                                {
+                                    <div class="actividad-item actividad-mas" 
+                                         title="Ver día completo"
+                                         @onclick="() => IrAVistaDia(dia.Fecha)"
+                                         @onclick:stopPropagation="true">
+                                        <span class="actividad-texto">+@(dia.Actividades.Count - 2)</span>
+                                    </div>
+                                }
+                            </div>
+                        }
                     }
                 </div>
             }
@@ -236,7 +248,7 @@
                                     else
                                     {
                                         <span class="actividad-dia-fecha">
-                                            @actividad.FechaInicio.ToString("dd/MM/yyyy")
+                                            @actividad.FechaInicio.ToString("dd/MM/yyyy HH:mm")
                                         </span>
                                     }
                                 </div>
@@ -251,9 +263,6 @@
                                                 <i class="bi bi-person"></i> @actividad.NombreProfesor
                                             </span>
                                         }
-                                        <span class="actividad-fecha-calendario">
-                                            <i class="bi bi-calendar-event"></i> @actividad.FechaInicio.ToString("dd/MM/yyyy")
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -273,63 +282,87 @@
             </div>
         </div>
     }
-    else if (vistaActual == VistaCalendario.Año)
-    {
-        <!-- Vista Anual -->
-        <div class="calendario-anual">
-            @foreach (var mes in mesesAnio)
-            {
-                <div class="mes-anual">
-                    <h3 class="mes-titulo">@mes.Nombre</h3>
-                    <div class="mes-grid">
-                        @foreach (var dia in mes.Dias)
-                        {
-                            <div class="dia-anual 
-                                        @(dia.EsDelMesActual ? "" : "dia-otro-mes") 
-                                        @(dia.EsHoy && dia.EsDelMesActual ? "dia-hoy" : "")
-                                        @(dia.EsPasado ? "dia-pasado" : "")
-                                        @(dia.TieneActividades && dia.EsDelMesActual ? "dia-con-actividades" : "")"
-                                 @onclick="@(dia.EsDelMesActual ? EventCallback.Factory.Create(this, () => OnDiaClick(dia.Fecha)) : EventCallback.Empty)"
-                                 style="@(!dia.EsDelMesActual ? "cursor: not-allowed;" : "")">
-                                <span class="dia-numero">@dia.Fecha.Day</span>
-                                @if (dia.TieneActividades && dia.EsDelMesActual)
-                                {
-                                    <div class="indicador-actividades" 
-                                         title="@string.Join("\n", dia.Actividades.Select(a => ObtenerTextoActividad(a)))">
-                                        <i class="bi bi-circle-fill"></i>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    }
+    </div><!-- fin calendario-vista-wrap -->
+        </div><!-- fin calendario-main -->
+    </div><!-- fin calendario-layout -->
 </div>
 
 <style>
     .calendario-container {
         background-color: var(--color-bg-primary);
         border-radius: var(--border-radius-lg);
-        padding: 1.5rem;
+        margin: 0.5rem;
         box-shadow: 0 2px 8px var(--color-shadow);
+        width: 100%;
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .calendario-layout {
+        display: flex;
+        gap: 0;
+        align-items: stretch;
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .calendario-main {
+        flex: 1 1 0%;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        height: 100%;
+    }
+
+    .calendario-vista-wrap {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .calendario-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.75rem;
         gap: 1rem;
         flex-wrap: wrap;
+        flex-shrink: 0;
     }
 
     .calendario-header-left {
         display: flex;
         align-items: center;
         gap: 1rem;
-        flex: 1;
+        flex: 0 0 auto;
+    }
+
+    .calendario-header-filtros {
+        display: flex;
+        align-items: center;
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+        flex-direction: row;
+    }
+
+    .calendario-header-filtros .filtros-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .calendario-vistas {
@@ -401,8 +434,9 @@
     .calendario-dias-semana {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
+        gap: 0.2rem;
+        margin-bottom: 0.2rem;
+        flex-shrink: 0;
     }
 
     .dia-semana {
@@ -416,7 +450,17 @@
     .calendario-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 0.5rem;
+        gap: clamp(0.05rem, 0.5vw, 0.25rem);
+        min-width: 0;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .calendario-grid:not(.calendario-semana) {
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        max-height: 100%;
     }
 
     .calendario-semana {
@@ -424,15 +468,18 @@
     }
 
     .calendario-dia-semana {
+        width: 100%;
+        min-width: 0;
         border: 1px solid var(--color-border);
         border-radius: var(--border-radius-md);
-        padding: 0.75rem;
-        min-height: 200px;
+        padding: clamp(0.2rem, 0.8vw, 0.4rem);
         background-color: var(--color-bg-primary);
         cursor: pointer;
         transition: all var(--transition-fast);
         display: flex;
         flex-direction: column;
+        min-height: 0;
+        box-sizing: border-box;
     }
 
     .calendario-dia-semana:hover {
@@ -457,11 +504,13 @@
 
     .actividades-lista {
         flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.3rem;
+        gap: 0.25rem;
         overflow-y: auto;
-        padding: 0.25rem 0;
+        overflow-x: hidden;
+        padding: 0.2rem 0;
     }
 
     .actividad-item {
@@ -493,10 +542,22 @@
     }
 
     .actividad-texto {
-        display: block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: left;
+        gap: 0.25rem;
         width: 100%;
+        text-align: left;
+    }
+
+    .actividad-texto-label {
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .actividad-texto-hora {
+        flex-shrink: 0;
     }
 
     /* Tooltip personalizado para actividades */
@@ -609,9 +670,13 @@
 
     .calendario-dia {
         aspect-ratio: 1;
+        min-height: clamp(40px, 6vmin, 90px);
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
         border: 1px solid var(--color-border);
         border-radius: var(--border-radius-md);
-        padding: 0.25rem;
+        padding: clamp(0.08rem, 0.5vw, 0.25rem);
         cursor: pointer;
         position: relative;
         display: flex;
@@ -632,6 +697,13 @@
     .calendario-dia.dia-otro-mes {
         opacity: 0.4;
         background-color: var(--color-gray-100);
+    }
+
+    .calendario-dia.dia-vacio {
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        cursor: default;
     }
 
     .calendario-dia.dia-pasado,
@@ -675,12 +747,13 @@
     .actividades-lista-mensual {
         display: flex;
         flex-direction: column;
-        gap: 0.3rem;
+        gap: clamp(0.1rem, 0.25vw, 0.25rem);
         width: 100%;
         flex: 1;
+        min-height: 0;
         overflow: hidden;
-        margin-top: 0.35rem;
-        padding: 0 0.15rem;
+        margin-top: 0.08rem;
+        padding: 0 clamp(0.04rem, 0.25vw, 0.08rem);
     }
 
     .actividad-mas {
@@ -716,6 +789,11 @@
         .calendario-header-left {
             justify-content: space-between;
             flex-wrap: wrap;
+        }
+
+        .calendario-header-filtros {
+            width: 100%;
+            justify-content: flex-start;
         }
 
         .calendario-vistas {
@@ -817,6 +895,8 @@
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .dia-vista-header {
@@ -901,6 +981,9 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .sin-actividades {
@@ -926,14 +1009,14 @@
     .actividades-dia-lista {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.5rem;
     }
 
     .actividad-dia-card {
         background-color: var(--color-bg-primary);
         border: 2px solid var(--color-border);
         border-radius: var(--border-radius-lg);
-        padding: 1.5rem;
+        padding: 1rem;
         cursor: pointer;
         transition: all var(--transition-fast);
         box-shadow: 0 2px 4px var(--color-shadow);
@@ -1181,6 +1264,112 @@
             gap: 0.5rem;
         }
     }
+    @@media (min-width: 1366px) {
+    .calendario-container {
+        margin: 0.05rem;
+        box-shadow: 0 1px 4px var(--color-shadow);
+        display: flex;
+        flex-direction: column;
+        /* ← asegura que hereda altura del padre */
+        height: 100%;
+        min-height: 0;
+    }
+
+    .calendario-header {
+        margin-bottom: 0.05rem;
+        gap: 0.05rem;
+        flex-shrink: 0;          /* ← no se comprime nunca */
+    }
+
+    .calendario-title h2 { font-size: 1.05rem; }
+    .btn-vista { padding: 0.25rem 0.6rem; font-size: 0.7rem; }
+    .btn-vista span { display: none; }
+    .btn-vista i { font-size: 0.7rem; }
+    .btn-nav { padding: 0.15rem 0.5rem; }
+    .btn-nav i { font-size: 0.8rem; }
+
+    .calendario-main {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* vista-wrap ocupa TODO el espacio restante del main */
+    .calendario-vista-wrap {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* El grid de mes estira sus filas para llenar el wrap */
+    .calendario-grid:not(.calendario-semana) {
+        flex: 1;
+        min-height: 0;
+        grid-template-rows: repeat(6, 1fr);
+        overflow: hidden;        /* ← sin scroll, las 6 filas deben caber */
+        max-height: 100%;
+    }
+
+    /* Celda de mes: se adapta a la fila, sin aspect-ratio */
+    .calendario-dia {
+        aspect-ratio: auto;
+        min-height: 0;
+        height: 100%;
+        flex: 1;
+        padding: 0.05rem;
+        overflow: hidden;
+    }
+
+    /* Cabecera de días semana no se comprime */
+    .calendario-dias-semana {
+        gap: 0.05rem;
+        margin-bottom: 0.05rem;
+        flex-shrink: 0;
+    }
+
+    .dia-semana { padding: 0.05rem; font-size: 0.7rem; }
+
+    .calendario-grid {
+        gap: 0.05rem;
+        flex: 1;
+        min-height: 0;
+    }
+
+    /* Vista semana */
+    .calendario-semana { grid-template-columns: repeat(7, 1fr); }
+    .calendario-dia-semana { min-height: auto; flex: 1; padding: 0.2rem; }
+    .dia-semana-header { margin-bottom: 0.05rem; padding-bottom: 0.05rem; }
+
+    .dia-numero { font-size: 0.9rem; margin-bottom: 0.1rem; }
+
+    .actividades-lista { gap: 0.05rem; padding: 0; flex: 1; min-height: 0; }
+    .actividades-lista-mensual { gap: 0.05rem; margin-top: 0; flex: 1; min-height: 0; overflow: hidden; }
+
+    .actividad-item { font-size: 0.7rem; padding: 0.1rem 0.35rem; min-height: 18px; }
+
+    .calendario-anual { grid-template-columns: repeat(3, 1fr); gap: 0.05rem; }
+    .dia-anual { padding: 0.05rem; }
+
+    .calendario-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .page-header { flex-shrink: 0; }
+    .calendario-wrapper { flex: 1; min-height: 0; }
+}
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        white-space: nowrap;
+        border: 0;
+    }
 </style>
 
 @code {
@@ -1191,6 +1380,7 @@
     [Parameter] public EventCallback OnActividadGuardada { get; set; }
     [Parameter] public EventCallback OnActividadEliminada { get; set; }
     [Parameter] public EventCallback<ActividadCalendarioDto> OnActividadSeleccionada { get; set; }
+    [Parameter] public RenderFragment? HeaderFilters { get; set; }
 
     private enum VistaCalendario
     {
@@ -1565,18 +1755,18 @@
         // Ajustar para que lunes sea 0
         diaSemanaInicio = diaSemanaInicio == 0 ? 6 : diaSemanaInicio - 1;
 
-        // Días del mes anterior
+        // Celdas vacías del mes anterior (solo para alinear la grilla)
         var mesAnterior = mesActual.AddMonths(-1);
-        var ultimoDiaMesAnterior = new DateTime(mesAnterior.Year, mesAnterior.Month, 
+        var ultimoDiaMesAnterior = new DateTime(mesAnterior.Year, mesAnterior.Month,
             DateTime.DaysInMonth(mesAnterior.Year, mesAnterior.Month));
-        
+
         for (int i = diaSemanaInicio - 1; i >= 0; i--)
         {
             var fecha = ultimoDiaMesAnterior.AddDays(-i);
-            diasCalendario.Add(CrearDiaCalendario(fecha, false));
+            diasCalendario.Add(CrearDiaCalendarioVacio(fecha));
         }
 
-        // Días del mes actual
+        // Días del mes actual (solo estos muestran número y actividades)
         var totalDiasMesActual = DateTime.DaysInMonth(mesActual.Year, mesActual.Month);
         for (int dia = 1; dia <= totalDiasMesActual; dia++)
         {
@@ -1584,13 +1774,13 @@
             diasCalendario.Add(CrearDiaCalendario(fecha, true));
         }
 
-        // Días del mes siguiente para completar la grilla
-        var diasRestantes = 42 - diasCalendario.Count; // 6 semanas x 7 días
+        // Celdas vacías del mes siguiente para completar 5 semanas x 7 días
+        var diasRestantes = 35 - diasCalendario.Count;
         var primerDiaMesSiguiente = new DateTime(mesActual.Year, mesActual.Month, 1).AddMonths(1);
         for (int dia = 1; dia <= diasRestantes; dia++)
         {
             var fecha = primerDiaMesSiguiente.AddDays(dia - 1);
-            diasCalendario.Add(CrearDiaCalendario(fecha, false));
+            diasCalendario.Add(CrearDiaCalendarioVacio(fecha));
         }
     }
 
@@ -1685,7 +1875,24 @@
             EsFestivo = esFestivo,
             TieneActividades = actividadesDia.Count > 0,
             CantidadActividades = actividadesDia.Count,
-            Actividades = actividadesDia
+            Actividades = actividadesDia,
+            EsVacio = false
+        };
+    }
+
+    private DiaCalendario CrearDiaCalendarioVacio(DateTime fecha)
+    {
+        return new DiaCalendario
+        {
+            Fecha = fecha,
+            EsDelMesActual = false,
+            EsHoy = false,
+            EsPasado = false,
+            EsFestivo = false,
+            TieneActividades = false,
+            CantidadActividades = 0,
+            Actividades = new List<ActividadCalendarioDto>(),
+            EsVacio = true
         };
     }
 
@@ -1830,6 +2037,19 @@
                 await OnDiaSeleccionado.InvokeAsync(fecha);
             }
         }
+    }
+
+    private async Task OnDiaCalendarioClick(DiaCalendario dia)
+    {
+        if (dia.EsVacio)
+            return;
+        await OnDiaClick(dia.Fecha);
+    }
+
+    private async Task IrAVistaDia(DateTime fecha)
+    {
+        fechaActual = fecha.Date;
+        await CambiarVista(VistaCalendario.Dia);
     }
 
     private DotNetObjectReference<CalendarioComponent>? _dotNetRef;
@@ -2212,6 +2432,7 @@
         public bool TieneActividades { get; set; }
         public int CantidadActividades { get; set; }
         public List<ActividadCalendarioDto> Actividades { get; set; } = new();
+        public bool EsVacio { get; set; }
     }
 
     private class DiaSemana
