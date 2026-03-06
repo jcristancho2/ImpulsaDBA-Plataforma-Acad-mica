@@ -1,0 +1,131 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="accessibility-bar" role="group" aria-label="Opciones de accesibilidad">
+    <!-- Alto Contraste -->
+    <button type="button"
+            class="icon"
+            @onclick="ToggleHighContrast"
+            aria-pressed="@_highContrast"
+            aria-label="@( _highContrast ? "Desactivar alto contraste" : "Activar alto contraste")"
+            title="Alto contraste">
+        <i class="bi bi-circle-half" aria-hidden="true"></i>
+        <span class="tooltip-text">Alto contraste</span>
+    </button>
+
+    <!-- Disminuir Tamaño de Texto -->
+    <button type="button"
+            class="icon"
+            @onclick="DecreaseFontSize"
+            disabled="@(_currentFontSize == 0)"
+            aria-label="Disminuir tamaño de texto"
+            title="Disminuir tamaño de texto">
+        <i class="bi bi-type" aria-hidden="true"></i>
+        <span class="tooltip-text">Disminuir texto</span>
+    </button>
+    <!-- Aumentar Tamaño de Texto -->
+    <button type="button"
+            class="icon"
+            @onclick="IncreaseFontSize"
+            disabled="@(_currentFontSize == _fontSizeLabels.Length - 1)"
+            aria-label="Aumentar tamaño de texto"
+            title="Aumentar tamaño de texto">
+        <i class="bi bi-type" aria-hidden="true"></i>
+        <span class="tooltip-text">Aumentar texto</span>
+    </button>
+
+    <!-- Restablecer Preferencias -->
+    <button type="button"
+            class="icon"
+            @onclick="ResetAllPreferences"
+            aria-label="Restablecer todas las preferencias de accesibilidad"
+            title="Restablecer accesibilidad">
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+        <span class="tooltip-text">Restablecer accesibilidad</span>
+    </button>
+</div>
+
+@code {
+    private bool _highContrast = false;
+    private int _currentFontSize = 1;
+    private string[] _fontSizeLabels = { "XS", "Normal", "S", "M", "L" };
+    private string[] _fontSizeClasses = { "font-size-0875", "font-size-1", "font-size-1125", "font-size-1325", "font-size-1525" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Recuperar preferencias de localStorage
+        // Nota: Las preferencias ya se han cargado y aplicado en el index.html,
+        // pero actualizamos el estado del componente para que los botones muestren el estado correcto
+        _highContrast = await JSRuntime.InvokeAsync<bool>("impulsaAcc.getFlag", "high-contrast");
+        var savedFontSize = await JSRuntime.InvokeAsync<int>("impulsaAcc.getFontSize", 1);
+        
+        if (savedFontSize >= 0 && savedFontSize < _fontSizeClasses.Length)
+        {
+            _currentFontSize = savedFontSize;
+        }
+    }
+
+    private async Task ToggleHighContrast()
+    {
+        _highContrast = !_highContrast;
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.setHighContrast", _highContrast);
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.saveFlag", "high-contrast", _highContrast);
+    }
+
+    private async Task IncreaseFontSize()
+    {
+        if (_currentFontSize < _fontSizeClasses.Length - 1)
+        {
+            _currentFontSize++;
+            await ApplyFontSize();
+        }
+    }
+
+    private async Task DecreaseFontSize()
+    {
+        if (_currentFontSize > 0)
+        {
+            _currentFontSize--;
+            await ApplyFontSize();
+        }
+    }
+
+    private async Task ApplyFontSize()
+    {
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.setFontSize", _currentFontSize);
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.saveFontSize", _currentFontSize);
+    }
+
+    private async Task ResetAllPreferences()
+    {
+        _highContrast = false;
+        _currentFontSize = 1;
+
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.setHighContrast", false);
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.setFontSize", 1);
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.saveFlag", "high-contrast", false);
+        await JSRuntime.InvokeVoidAsync("impulsaAcc.saveFontSize", 1);
+    }
+}
+
+<style>
+    .size-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        cursor: default;
+    }
+
+    .size-indicator .label.bold {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    :disabled.icon {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+

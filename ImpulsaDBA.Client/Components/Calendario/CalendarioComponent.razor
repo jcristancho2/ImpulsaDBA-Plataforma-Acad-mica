@@ -68,14 +68,20 @@
         <div class="calendario-grid calendario-semana">
             @foreach (var dia in diasSemana)
             {
-                <div class="calendario-dia-semana 
+                <button type="button"
+                        class="calendario-dia-semana 
                             @(dia.EsHoy ? "dia-hoy" : "") 
                             @(dia.EsPasado ? "dia-pasado" : "")
                             @(dia.EsFestivo ? "dia-festivo" : "")
                             @(dia.TieneActividades ? "dia-con-actividades" : "")"
-                     data-drop-day
-                     data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
-                     @onclick="() => OnDiaClick(dia.Fecha)">
+                        role="gridcell"
+                        aria-label="@dia.Fecha.ToString("dddd, dd MMMM yyyy")"
+                        aria-disabled="@(dia.EsPasado ? "true" : "false")"
+                        disabled="@dia.EsPasado"
+                        data-drop-day
+                        data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
+                        @onclick="() => OnDiaClick(dia.Fecha)"
+                        @onkeydown="@((KeyboardEventArgs e) => OnDiaKeyDownSemana(e, dia.Fecha))">
                     <div class="dia-semana-header">
                         <span class="dia-numero">@dia.Fecha.Day</span>
                         <span class="dia-nombre">@dia.Fecha.ToString("ddd", new CultureInfo("es-ES"))</span>
@@ -85,23 +91,25 @@
                         <div class="actividades-lista">
                             @foreach (var actividad in dia.Actividades)
                             {
-                                <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
-                                     style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
-                                     title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
-                                     draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                     data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                     data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
-                                     @onclick="() => OnActividadClick(actividad)"
-                                     @onclick:stopPropagation="true">
+                                <button type="button"
+                                        class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)"
+                                        style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
+                                        title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
+                                        draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                        data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                        data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
+                                        aria-label="Actividad @actividad.TipoActividad: @ObtenerTextoEtiqueta(actividad) a las @actividad.FechaInicio.ToString("HH:mm")"
+                                        @onclick="() => OnActividadClick(actividad)"
+                                        @onclick:stopPropagation="true">
                                     <span class="actividad-texto">
                                         <span class="actividad-texto-hora">@actividad.FechaInicio.ToString("HH:mm")</span>
                                         <span class="actividad-texto-label">@ObtenerTextoEtiqueta(actividad)</span>
                                     </span>
-                                </div>
+                                </button>
                             }
                         </div>
                     }
-                </div>
+                </button>
             }
         </div>
     }
@@ -120,15 +128,21 @@
         <div class="calendario-grid">
             @foreach (var dia in diasCalendario)
             {
-                <div class="calendario-dia 
+                <button type="button"
+                        class="calendario-dia 
                             @(dia.EsVacio ? "dia-vacio" : (dia.EsDelMesActual ? "" : "dia-otro-mes")) 
                             @(dia.EsHoy ? "dia-hoy" : "") 
                             @(dia.EsPasado ? "dia-pasado" : "")
                             @(dia.EsFestivo ? "dia-festivo" : "")
                             @(dia.TieneActividades ? "dia-con-actividades" : "")"
-                     data-drop-day
-                     data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
-                     @onclick="() => OnDiaCalendarioClick(dia)">
+                        role="gridcell"
+                        aria-label="@dia.Fecha.ToString("dddd, dd MMMM yyyy")"
+                        aria-disabled="@(dia.EsVacio || dia.EsPasado ? "true" : "false")"
+                        data-drop-day
+                        data-fecha="@dia.Fecha.ToString("yyyy-MM-dd")"
+                        disabled="@(dia.EsVacio || dia.EsPasado)"
+                        @onclick="() => OnDiaCalendarioClick(dia)"
+                        @onkeydown="@((KeyboardEventArgs e) => OnDiaKeyDownMes(e, dia.Fecha))">
                     @if (!dia.EsVacio)
                     {
                         <span class="dia-numero">@dia.Fecha.Day</span>
@@ -137,32 +151,36 @@
                             <div class="actividades-lista-mensual">
                                 @foreach (var actividad in dia.Actividades.Take(2))
                                 {
-                                    <div class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)" 
-                                         style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
-                                         title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
-                                         draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                         data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
-                                         data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
-                                         @onclick="() => OnActividadClick(actividad)"
-                                         @onclick:stopPropagation="true">
+                                    <button type="button"
+                                            class="actividad-item @ObtenerClaseColor(actividad.IdTipoActividad)"
+                                            style="background-color: @ObtenerColorActividad(actividad); color: @ObtenerColorTextoActividad(actividad);"
+                                            title="@ObtenerTextoActividad(actividad) - Arrastre para mover a otro día"
+                                            draggable="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                            data-draggable-activity="@(TipoFiltro == "asignaturas" ? "true" : "false")"
+                                            data-activity-id="@(TipoFiltro == "asignaturas" ? actividad.Id.ToString() : "")"
+                                            aria-label="Actividad @actividad.TipoActividad: @ObtenerTextoEtiqueta(actividad)"
+                                            @onclick="() => OnActividadClick(actividad)"
+                                            @onclick:stopPropagation="true">
                                         <span class="actividad-texto">
                                             <span class="actividad-texto-label">@ObtenerTextoEtiqueta(actividad)</span>
                                         </span>
-                                    </div>
+                                    </button>
                                 }
                                 @if (dia.Actividades.Count > 2)
                                 {
-                                    <div class="actividad-item actividad-mas" 
-                                         title="Ver día completo"
-                                         @onclick="() => IrAVistaDia(dia.Fecha)"
-                                         @onclick:stopPropagation="true">
+                                    <button type="button"
+                                            class="actividad-item actividad-mas"
+                                            title="Ver día completo"
+                                            aria-label="Ver @(dia.Actividades.Count - 2) actividades más de este día"
+                                            @onclick="() => IrAVistaDia(dia.Fecha)"
+                                            @onclick:stopPropagation="true">
                                         <span class="actividad-texto">+@(dia.Actividades.Count - 2)</span>
-                                    </div>
+                                    </button>
                                 }
                             </div>
                         }
                     }
-                </div>
+                </button>
             }
         </div>
     }
@@ -407,7 +425,7 @@
         border-radius: var(--border-radius-md);
         padding: 0.5rem 1rem;
         cursor: pointer;
-        color: var(--color-text-primary);
+        color: #ffffff; /* Flechas (chevron) blancas */
         transition: all var(--transition-fast);
         display: flex;
         align-items: center;
@@ -578,7 +596,7 @@
         z-index: 1000;
         margin-bottom: 0.5rem;
         pointer-events: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.083);
         max-width: 250px;
         word-wrap: break-word;
         text-align: left;
@@ -2050,6 +2068,150 @@
     {
         fechaActual = fecha.Date;
         await CambiarVista(VistaCalendario.Dia);
+    }
+
+    /// <summary>
+    /// Maneja navegación por teclado en vista semanal
+    /// Arrow keys (←→) = día anterior/siguiente
+    /// Arrow keys (↑↓) = semana anterior/siguiente  
+    /// Home = lunes de la semana
+    /// End = domingo de la semana
+    /// PageUp = semana anterior
+    /// PageDown = semana siguiente
+    /// Escape = sin acción actualmente
+    /// </summary>
+    private async Task OnDiaKeyDownSemana(KeyboardEventArgs e, DateTime fecha)
+    {
+        switch (e.Key)
+        {
+            case "ArrowLeft":
+                // Día anterior
+                var diaPrev = fecha.AddDays(-1);
+                if (diaPrev >= fechaMinima)
+                {
+                    await OnDiaClick(diaPrev);
+                }
+                break;
+                
+            case "ArrowRight":
+                // Día siguiente
+                var diaNext = fecha.AddDays(1);
+                if (diaNext.Year == fecha.Year || diaNext.Year == fecha.AddYears(1).Year)
+                {
+                    await OnDiaClick(diaNext);
+                }
+                break;
+                
+            case "ArrowUp":
+                // Semana anterior
+                await PeriodoAnterior();
+                break;
+                
+            case "ArrowDown":
+                // Semana siguiente
+                await PeriodoSiguiente();
+                break;
+                
+            case "Home":
+                // Lunes de la semana (inicio de semana actual)
+                var luneslunes = ObtenerInicioSemana(fecha);
+                await OnDiaClick(luneslunes);
+                break;
+                
+            case "End":
+                // Domingo de la semana (fin de semana)
+                var domingo = ObtenerInicioSemana(fecha).AddDays(6);
+                await OnDiaClick(domingo);
+                break;
+                
+            case "PageUp":
+                // Semana anterior (igual que Arrow Up)
+                await PeriodoAnterior();
+                break;
+                
+            case "PageDown":
+                // Semana siguiente (igual que Arrow Down)
+                await PeriodoSiguiente();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Maneja navegación por teclado en vista mensual (grid 7x5)
+    /// Arrow keys (←→↑↓) = día anterior/siguiente en grid
+    /// Home = primer día del mes
+    /// End = último día del mes
+    /// PageUp = mes anterior
+    /// PageDown = mes siguiente
+    /// </summary>
+    private async Task OnDiaKeyDownMes(KeyboardEventArgs e, DateTime fecha)
+    {
+        switch (e.Key)
+        {
+            case "ArrowLeft":
+                // Día anterior
+                var diaPrev = fecha.AddDays(-1);
+                if (diaPrev >= fechaMinima && (diaPrev.Month == fecha.Month || diaPrev.Month < fecha.Month))
+                {
+                    await OnDiaClick(diaPrev);
+                }
+                break;
+                
+            case "ArrowRight":
+                // Día siguiente
+                var diaNext = fecha.AddDays(1);
+                if (diaNext.Month == fecha.Month || diaNext.Month > fecha.Month)
+                {
+                    await OnDiaClick(diaNext);
+                }
+                break;
+                
+            case "ArrowUp":
+                // Semana anterior (7 días atrás)
+                var semanaPrev = fecha.AddDays(-7);
+                if (semanaPrev >= fechaMinima)
+                {
+                    await OnDiaClick(semanaPrev);
+                }
+                break;
+                
+            case "ArrowDown":
+                // Semana siguiente (7 días adelante)
+                var semanaNext = fecha.AddDays(7);
+                if (semanaNext.Year <= DateTime.Now.Year + 1)
+                {
+                    await OnDiaClick(semanaNext);
+                }
+                break;
+                
+            case "Home":
+                // Primer día del mes
+                var primerDia = new DateTime(fecha.Year, fecha.Month, 1);
+                if (primerDia >= fechaMinima)
+                {
+                    await OnDiaClick(primerDia);
+                }
+                break;
+                
+            case "End":
+                // Último día del mes
+                var ultimoDia = new DateTime(fecha.Year, fecha.Month, DateTime.DaysInMonth(fecha.Year, fecha.Month));
+                if (ultimoDia >= fechaMinima)
+                {
+                    await OnDiaClick(ultimoDia);
+                }
+                break;
+                
+            case "PageUp":
+                // Mes anterior
+                await PeriodoAnterior();
+                break;
+                
+            case "PageDown":
+                // Mes siguiente
+                await PeriodoSiguiente();
+                break;
+        }
     }
 
     private DotNetObjectReference<CalendarioComponent>? _dotNetRef;

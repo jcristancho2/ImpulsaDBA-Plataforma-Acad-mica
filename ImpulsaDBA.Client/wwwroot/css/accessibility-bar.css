@@ -1,0 +1,218 @@
+/* ============================================
+   ACCESSIBILITY BAR STYLES
+   Barra de herramientas de accesibilidad
+   ============================================ */
+
+/* Contenedor lateral fijo en la derecha */
+.accessibility-bar-container {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 1050;
+}
+
+.accessibility-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.4rem;
+    background-color: #0052cc;
+    border-radius: 16px 0 0 16px;
+    border: 1px solid #0043a8;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.accessibility-bar.divHighContrast {
+    background-color: #f8f9fa;
+}
+
+/* ============================================
+   ICON BUTTON STYLES
+   ============================================ */
+
+.accessibility-bar .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    color: #0052cc;
+    font-size: 1.25rem;
+    position: relative;
+}
+
+.accessibility-bar .icon:hover {
+    background-color: #e6f0ff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+.accessibility-bar .icon:focus-visible {
+    outline: 2px solid #ffd54f;
+    outline-offset: 3px;
+}
+
+.accessibility-bar .icon:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   ICON TEXT LABEL
+   ============================================ */
+
+.accessibility-bar .icon .label {
+    font-size: 0.70rem;
+    font-weight: 500;
+    color: #495057;
+    line-height: 1.2;
+    word-wrap: break-word;
+    max-width: 70px;
+}
+
+.accessibility-bar .icon:hover .label {
+    color: #212529;
+}
+
+/* ============================================
+   ICON STYLING
+   ============================================ */
+
+.accessibility-bar i {
+    display: block;
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+/* ============================================
+   TOOLTIP PARA BOTONES SOLO ICONO
+   ============================================ */
+
+.accessibility-bar .icon .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 0.5rem;
+    white-space: nowrap;
+    background: #1c2635;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+    transition: opacity .18s ease, visibility .18s ease;
+    z-index: 100;
+}
+
+.accessibility-bar .icon:hover .tooltip-text,
+.accessibility-bar .icon:focus-visible .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Ocultar posibles etiquetas de texto visibles, dejando solo iconos */
+.accessibility-bar .icon .label {
+    display: none;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+
+
+/* ============================================
+   DARK MODE SUPPORT
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+    .accessibility-bar {
+        background-color: #343a40;
+        border-color: #495057;
+    }
+
+    .accessibility-bar.divHighContrast {
+        background-color: #1a1a1a;
+        border-color: #333;
+    }
+
+    .accessibility-bar .icon {
+        color: #adb5bd;
+    }
+
+    .accessibility-bar .icon:hover {
+        background-color: #495057;
+        color: #fff;
+    }
+
+    .accessibility-bar .icon:focus-visible {
+        outline-color: #7cb3f5;
+        background-color: #495057;
+    }
+
+    .accessibility-bar .icon:active {
+        background-color: #6c757d;
+    }
+
+    .accessibility-bar .icon .label {
+        color: #adb5bd;
+    }
+
+    .accessibility-bar .icon:hover .label {
+        color: #fff;
+    }
+}
+
+/* ============================================
+   HIGH CONTRAST MODE
+   ============================================ */
+
+@media (prefers-contrast: more) {
+    .accessibility-bar {
+        border-width: 2px;
+        border-color: #212529;
+    }
+
+    .accessibility-bar .icon {
+        border: 1px solid transparent;
+        border-radius: 4px;
+    }
+
+    .accessibility-bar .icon:hover,
+    .accessibility-bar .icon:focus-visible {
+        border-color: #212529;
+    }
+
+    .accessibility-bar .icon .label {
+        font-weight: 700;
+    }
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .accessibility-bar .icon {
+        transition: none;
+    }
+
+    .accessibility-bar .icon:hover {
+        transform: none;
+    }
+
+    .accessibility-bar .icon:active {
+        transform: none;
+    }
+}

@@ -1,3 +1,13 @@
 @inherits LayoutComponentBase
+@using ImpulsaDBA.Client.Components.Shared
 
-@Body
+<div class="empty-layout-root">
+    <div class="empty-layout-content">
+        @Body
+    </div>
+
+    <!-- Barra de accesibilidad en pantallas Login -->
+    <div class="accessibility-bar-container">
+        <AccessibilityHeader />
+    </div>
+</div>

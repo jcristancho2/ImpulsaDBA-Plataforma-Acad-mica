@@ -10,7 +10,11 @@
 @implements IAsyncDisposable
 
 <div class="ayudas-dropdown-container" @ref="containerRef">
-    <button class="ayudas-button" @onclick="ToggleDropdown">
+    <button class="ayudas-button"
+            @onclick="ToggleDropdown"
+            type="button"
+            title="Ayuda del módulo"
+            aria-label="Abrir menú de ayudas del módulo">
         <span class="ayudas-icon-wrapper">
             <i class="bi bi-info"></i>
         </span>
@@ -43,14 +47,24 @@
             
             @if (tienePDF)
             {
-                <a href="@PDF!.UrlAyuda" target="_blank" class="ayudas-dropdown-item" @onclick="() => OnItemClick(PDF.UrlAyuda)">
-                    PDF
+                <a href="@PDF!.UrlAyuda"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="ayudas-dropdown-item"
+                   aria-label="Abrir ayuda en PDF en una nueva pestaña"
+                   @onclick="() => OnItemClick(PDF.UrlAyuda)">
+                    PDF<span class="sr-only">, se abre en una nueva pestaña</span>
                 </a>
             }
             @if (tieneVIDEO)
             {
-                <a href="@VIDEO!.UrlAyuda" target="_blank" class="ayudas-dropdown-item" @onclick="() => OnItemClick(VIDEO.UrlAyuda)">
-                    Video
+                <a href="@VIDEO!.UrlAyuda"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="ayudas-dropdown-item"
+                   aria-label="Abrir ayuda en video en una nueva pestaña"
+                   @onclick="() => OnItemClick(VIDEO.UrlAyuda)">
+                    Video<span class="sr-only">, se abre en una nueva pestaña</span>
                 </a>
             }
             @if (!tienePDF && !tieneVIDEO)
@@ -198,8 +212,8 @@
     }
 
     .ayudas-button {
-        width: 48px;
-        height: 48px;
+        width: 45px;
+        height: 45px;
         border-radius: 50%;
         background-color: #006bb7;
         border: none;

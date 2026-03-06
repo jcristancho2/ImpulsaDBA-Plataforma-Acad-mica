@@ -1,6 +1,9 @@
 @using ImpulsaDBA.Shared.DTOs
 
-<div class="asignatura-card" @onclick="OnCardClick">
+<button type="button" 
+        class="asignatura-card" 
+        aria-label="Asignatura: @Asignatura.Nombre, Grupo @Asignatura.Grupo, @Asignatura.CantidadEstudiantes estudiantes"
+        @onclick="OnCardClick">
     <!-- Contenedor con color de la tarjeta para nombre, grupo y estudiantes -->
     <div class="asignatura-info-container" style="background-color: @Asignatura.ColorHex;">
         <div class="asignatura-header">
@@ -45,7 +48,7 @@
             </div>
         </div>
     </div>
-</div>
+</button>
 
 @code {
     [Parameter] public AsignaturaDto Asignatura { get; set; } = default!;

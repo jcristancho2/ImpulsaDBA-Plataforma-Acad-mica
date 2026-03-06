@@ -15,38 +15,49 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IDisposable
 
-<PageTitle>Foro - ImpulsaDBA</PageTitle>
+<PageTitle>Foro - ImpulsaDBA Student</PageTitle>
 
 <div class="foro-page">
     <div class="foro-header">
         <div class="foro-header-left">
             <a href="/dashboard/foro" class="back-link"><i class="bi bi-arrow-left"></i> Volver al listado</a>
-            <h1>@(asignaturaActual != null ? $"{asignaturaActual.Nombre} ({asignaturaActual.Grupo})" : "Foro")</h1>
+            <h1>@(asignaturaActual != null ? $"{asignaturaActual.Nombre}" : "Foro de la materia")</h1>
         </div>
         <div class="foro-header-actions">
-            <label class="foro-auditoria-toggle">
-                <input type="checkbox" checked="@modoAuditoria" @onchange="OnAuditoriaChanged" />
-                <span><i class="bi bi-eye-fill"></i> Auditoría</span>
-            </label>
             <div class="foro-search-wrap">
-                <input class="foro-search-input"
-                       placeholder="Buscar foro por materia (Nombre o grupo)..."
+                <input id="foro-search-input"
+                       class="foro-search-input"
+                       type="search"
+                       placeholder="Buscar foro por materia..."
                        @bind="terminoBusquedaForo"
                        @bind:event="oninput"
-                       @onkeydown="OnSearchKeyDown" />
+                       @onkeydown="OnSearchKeyDown"
+                       role="combobox"
+                       aria-autocomplete="list"
+                       aria-haspopup="listbox"
+                       aria-expanded="@(ResultadosBusquedaForo.Any())"
+                       aria-controls="foro-search-resultados"
+                       aria-label="Buscar foro por materia" />
                 @if (ResultadosBusquedaForo.Any())
                 {
-                    <ul class="foro-search-dropdown">
+                    <ul id="foro-search-resultados" class="foro-search-dropdown" role="listbox" aria-label="Resultados de búsqueda de foros">
                         @foreach (var a in ResultadosBusquedaForo)
                         {
-                            <li><button type="button" class="foro-search-item" @onclick="@(() => IrAForo(a))">@TituloForo(a)</button></li>
+                            <li>
+                                <button type="button"
+                                        class="foro-search-item"
+                                        role="option"
+                                        @onclick="@(() => IrAForo(a))">
+                                    @TituloForo(a)
+                                </button>
+                            </li>
                         }
                     </ul>
                 }
             </div>
         </div>
     </div>
-
+    
     @if (cargando)
     {
         <div class="foro-loading">
@@ -57,126 +68,71 @@
     else
     {
         <div class="foro-container">
-            <div class="foro-comentarios">
+            <div class="foro-comentarios"
+                 role="log"
+                 aria-live="polite"
+                 aria-label="Comentarios del foro en tiempo real">
                 @foreach (var c in comentariosVisibles)
                 {
-                    <div class="comentario-row @(c.IdPersona == userId ? "comentario-propio" : "comentario-ajeno")">
+                    <article class="comentario-row @(c.IdPersona == userId ? "comentario-propio" : "comentario-ajeno")" 
+                             id="comentario-@c.Id"
+                             data-timestamp="@c.Fecha.Ticks">
                         <div class="comentario-card @(c.IdPersona == userId ? "comentario-card-propio" : "comentario-card-ajeno")">
-                            <div class="comentario-header">
+                        <header class="comentario-header">
+                            @if (c.IdPersona != userId)
+                            {
+                                <span class="comentario-autor">@c.NombrePersona</span>
+                            }
+                            <span class="comentario-fecha"><i class="bi bi-clock" aria-hidden="true"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
+                            <footer class="comentario-acciones">
+                                @if (!c.Eliminado && c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
+                                {
+                                    <button type="button" class="btn-accion btn-editar" aria-label="Editar comentario de @c.NombrePersona" @onclick="@(() => IniciarEdicion(c))"><i class="bi bi-brush-fill" aria-hidden="true"></i> Editar</button>
+                                    <button type="button" class="btn-accion btn-eliminar" aria-label="Eliminar comentario de @c.NombrePersona" @onclick="@(() => Eliminar(c))"><i class="bi bi-trash-fill" aria-hidden="true"></i> Eliminar</button>
+                                }
                                 @if (c.IdPersona != userId)
                                 {
-                                    <span class="comentario-autor">@c.NombrePersona</span>
+                                    <button type="button" class="btn-accion" aria-label="Responder a @c.NombrePersona" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill" aria-hidden="true"></i> Responder</button>
                                 }
-                                <span class="comentario-fecha"><i class="bi bi-clock"></i> @c.Fecha.ToString("dd/MM/yyyy hh:mm tt")</span>
-                                <div class="comentario-acciones">
-                                    @if (!c.Eliminado && c.IdPersona == userId && (DateTime.Now - c.Fecha).TotalMinutes <= 5)
-                                    {
-                                        <button type="button" class="btn-accion btn-editar" @onclick="@(() => IniciarEdicion(c))"><i class="bi bi-brush-fill"></i> Editar</button>
-                                        <button type="button" class="btn-accion btn-eliminar" @onclick="@(() => Eliminar(c))"><i class="bi bi-trash-fill"></i> Eliminar</button>
-                                    }
-                                    @if (c.IdPersona != userId)
-                                    {
-                                        <button type="button" class="btn-accion" @onclick="@(() => Responder(c))"><i class="bi bi-reply-fill"></i></button>
-                                    }
+                            </footer>
+                        </header>
+                        @if (c.Editado)
+                        {
+                            <div class="comentario-editado"><i class="bi bi-body-text"></i> Editado</div>
+                        }
+                        @if (idEditando == c.Id)
+                        {
+                            <div class="comentario-edicion">
+                                <textarea @bind="textoEditado" class="input-edicion" rows="3"></textarea>
+                                <div class="edicion-botones">
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="GuardarEdicion">Guardar</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelarEdicion">Cancelar</button>
                                 </div>
                             </div>
-                            @if (idEditando == c.Id)
+                        }
+                        else if (!c.Eliminado)
+                        {
+                            @* En BD: id_foro = mensaje referenciado, mensaje = texto de la respuesta. En pantalla: arriba el referenciado (por id_foro), debajo la respuesta. *@
+                            @if (c.IdForoReferencia is int idRef && idRef > 0)
                             {
-                                <div class="comentario-edicion">
-                                    <textarea @bind="textoEditado" class="input-edicion" rows="3"></textarea>
-                                    <div class="edicion-botones">
-                                        <button type="button" class="btn btn-primary btn-sm" @onclick="GuardarEdicion">Guardar</button>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelarEdicion">Cancelar</button>
-                                    </div>
-                                </div>
-                            }
-                            else if (c.Editado || c.Eliminado)
-                            {
-                                @if (modoAuditoria)
-                                {
-                                    @* Modo auditoría: en la misma card, mensaje original + todas las ediciones + último mensaje (o eliminado) *@
-                                    @if (historialPorComentario.TryGetValue(c.Id, out var timeline) && timeline.Count > 0)
+                                var refMsg = ObtenerMensajeReferencia(idRef);
+                                <div class="reply-quoted">
+                                    @if (refMsg != null)
                                     {
-                                        @foreach (var entrada in timeline)
-                                        {
-                                            @switch (entrada.TipoEntrada)
-                                            {
-                                                case "original":
-                                                    <div class="auditoria-bloque auditoria-original">
-                                                        <div class="auditoria-etiqueta"><i class="bi bi-file-earmark-text-fill"></i> Mensaje original</div>
-                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
-                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
-                                                    </div>
-                                                    break;
-                                                case "edicion":
-                                                    <div class="auditoria-bloque auditoria-edicion">
-                                                        <div class="auditoria-etiqueta"><i class="bi bi-pencil-fill"></i> Editado</div>
-                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
-                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
-                                                    </div>
-                                                    break;
-                                                case "eliminado":
-                                                    <div class="auditoria-bloque auditoria-eliminado">
-                                                        <div class="auditoria-etiqueta"><i class="bi bi-trash-fill"></i> Eliminado (último mensaje)</div>
-                                                        <div class="auditoria-cuerpo">@ComentarioParaMostrar(entrada.Comentario)</div>
-                                                        <div class="auditoria-fecha"><i class="bi bi-clock"></i> @entrada.Fecha.ToString("dd/MM/yyyy hh:mm tt")</div>
-                                                    </div>
-                                                    break;
-                                            }
-                                        }
+                                        <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
+                                        <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
                                     }
                                     else
                                     {
-                                        <div class="auditoria-bloque auditoria-sin-datos">
-                                            <i class="bi bi-exclamation-circle"></i> Sin historial disponible
-                                        </div>
+                                        <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
                                     }
-                                }
-                                else
-                                {
-                                    @* Auditoría desactivada: mostrar solo el último mensaje (mensaje editado actual) *@
-                                    @if (c.IdForoReferencia is int idRefNormal && idRefNormal > 0)
-                                    {
-                                        var refMsg = ObtenerMensajeReferencia(idRefNormal);
-                                        <div class="reply-quoted">
-                                            @if (refMsg != null)
-                                            {
-                                                <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
-                                                <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
-                                            }
-                                            else
-                                            {
-                                                <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
-                                            }
-                                        </div>
-                                        <div class="reply-response-label">Respuesta:</div>
-                                    }
-                                    <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
-                                }
+                                </div>
+                                <div class="reply-response-label">Respuesta:</div>
                             }
-                            else
-                            {
-                                @* Mensaje sin editar ni eliminar *@
-                                @if (c.IdForoReferencia is int idRef && idRef > 0)
-                                {
-                                    var refMsg = ObtenerMensajeReferencia(idRef);
-                                    <div class="reply-quoted">
-                                        @if (refMsg != null)
-                                        {
-                                            <div class="reply-quoted-author"><span class="reply-quoted-name">@refMsg.NombrePersona</span> escribió:</div>
-                                            <div class="reply-quoted-text">@ComentarioParaMostrar(refMsg.Comentario)</div>
-                                        }
-                                        else
-                                        {
-                                            <div class="reply-quoted-author" style="color:#6c757d;">Mensaje citado no disponible</div>
-                                        }
-                                    </div>
-                                    <div class="reply-response-label">Respuesta:</div>
-                                }
-                                <div class="comentario-cuerpo">@ComentarioParaMostrar(c.Comentario)</div>
-                            }
+                            <div class="comentario-cuerpo ql-editor ql-blank" @onclick="@(() => { })">@ComentarioParaMostrar(c.Comentario)</div>
+                        }
                         </div>
-                    </div>
+                    </article>
                 }
             </div>
 
@@ -189,14 +145,26 @@
                                 <div class="reply-title">Respondiendo a @mensajeRespondiendo.NombrePersona</div>
                                 <div class="reply-quoted-preview">@MensajeRespondidoPreview()</div>
                             </div>
-                            <button type="button" class="btn btn-link btn-sm p-0" @onclick="CancelarRespuesta">
-                                <i class="bi bi-x-lg"></i>
+                            <button type="button" class="btn btn-link btn-sm p-0" @onclick="CancelarRespuesta" aria-label="Cancelar respuesta">
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
                             </button>
                         </div>
                     }
-                    <textarea @bind="nuevoComentario" class="input-nuevo" placeholder="Escribe un comentario..." rows="1"></textarea>
-                    <button type="button" class="btn btn-primary btn-enviar" @onclick="EnviarComentario" disabled="@(string.IsNullOrWhiteSpace(nuevoComentario))">
-                        <i class="bi bi-send-fill"></i> Enviar
+                    <label for="nuevo-comentario" class="sr-only">Escribir un nuevo comentario</label>
+                    <span id="nuevo-comentario-ayuda" class="sr-only">
+                        Campo de comentario. Máximo 1000 caracteres. El botón Enviar publicará el mensaje en el foro.
+                    </span>
+                    <textarea id="nuevo-comentario"
+                              @bind="nuevoComentario"
+                              class="input-nuevo"
+                              placeholder="Escribe un comentario..."
+                              rows="1"
+                              aria-describedby="nuevo-comentario-ayuda"></textarea>
+                    <button type="button"
+                            class="btn btn-primary btn-enviar"
+                            @onclick="EnviarComentario"
+                            disabled="@(string.IsNullOrWhiteSpace(nuevoComentario))">
+                        <i class="bi bi-send-fill" aria-hidden="true"></i> Enviar
                     </button>
                 </div>
             </div>
@@ -206,7 +174,14 @@
 
 <style>
     .foro-page {
-    max-width: 100%; margin: 0 auto; padding: 1rem; height: 100vh; display: flex; flex-direction: column; overflow: hidden;}
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 1rem;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
     .foro-header {
         margin-bottom: 1.5rem;
         display: flex;
@@ -223,28 +198,12 @@
     .back-link { color: var(--color-primary, #0d6efd); text-decoration: none; font-size: 0.9rem; display: inline-block; margin-bottom: 0.5rem; }
     .back-link:hover { text-decoration: underline; }
     .foro-header h1 { font-size: 1.5rem; margin: 0; }
-    .foro-header-materia {
-        margin: 0;
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
     .foro-header-actions {
         display: flex;
         align-items: center;
         gap: 0.75rem;
         flex-wrap: wrap;
     }
-    .foro-auditoria-toggle {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.9rem;
-        color: #495057;
-        cursor: pointer;
-        user-select: none;
-    }
-    .foro-auditoria-toggle input { cursor: pointer; }
-    .foro-auditoria-toggle span { display: inline-flex; align-items: center; gap: 0.25rem; }
     .foro-search-input {
         padding: 0.4rem 0.6rem;
         border-radius: 999px;
@@ -288,19 +247,18 @@
     .foro-search-item:hover, .foro-search-item:focus {
         background: #f0f4f8;
     }
-    .foro-search-hint {
-        font-size: 0.75rem;
-        color: #868e96;
-    }
     .foro-loading { text-align: center; padding: 2rem; }
     .foro-loading .spinner { width: 40px; height: 40px; border: 3px solid #eee; border-top-color: var(--color-primary, #0d6efd); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @@keyframes spin { to { transform: rotate(360deg); } }
-    .foro-container {display: flex; flex-direction: column; flex: 1; min-height: 0;}
-    
-    .foro-comentarios { 
-    flex: 1; overflow-y: auto; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem;}
-
-
+    .foro-container { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .foro-comentarios {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
     .comentario-row {
         display: flex;
         width: 100%;
@@ -312,11 +270,11 @@
         justify-content: flex-start;
     }
     .comentario-card {
-        border: 1px solid var(--color-border, #dee2e6);
+        border: 1px solid #dee2e6;
         border-radius: 10px;
         padding: 0.5rem 0.65rem;
         margin-bottom: 0;
-        background: var(--color-bg-primary, #fff);
+        background: #fff;
         max-width: 78%;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
@@ -327,97 +285,21 @@
     .comentario-card-ajeno {
         background: #f8f9fa;
     }
-    .comentario-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem;}
-    .comentario-autor { font-weight: 300; color: #6c757d; }
+    .comentario-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+    .comentario-autor { font-weight: 400; color: rgb(144, 161, 188); }
     .comentario-fecha { font-size: 0.8rem; color: #6c757d; }
     .comentario-acciones { margin-left: auto; display: flex; gap: 0.25rem; }
     .btn-accion { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.25rem 0.5rem; }
-    .btn-editar { color: var(--color-primary, #0d6efd); }
+    .btn-editar { color: #0d6efd; }
     .btn-eliminar { color: #dc3545; }
     .comentario-editado { font-size: 0.8rem; color: #6c757d; margin-bottom: 0.25rem; }
     .comentario-cuerpo { word-wrap: break-word; overflow: hidden; white-space: normal; font-size: 1.1rem; }
-    /* Auditoría */
-    .mensaje-original {
-        background: #f1f3f5;
-        border-left: 4px solid #868e96;
-        padding: 8px;
-        border-radius: 6px;
-        margin-bottom: 6px;
-    }
-    .mensaje-editado {
-        background: #d0ebff;
-        border-left: 4px solid #339af0;
-        padding: 8px;
-        border-radius: 6px;
-    }
-    .mensaje-eliminado {
-        opacity: 0.8;
-        color: #6c757d;
-    }
-    .etiqueta-original,
-    .etiqueta-editado,
-    .etiqueta-eliminado {
-        font-size: 0.75rem;
-        margin-bottom: 4px;
-        font-weight: 600;
-    }
-    .etiqueta-eliminado { color: #c92a2a; }
-
-    /* Línea de tiempo auditoría (original → ediciones → eliminado) */
-    .auditoria-bloque {
-        border-radius: 6px;
-        padding: 0.45rem 0.65rem;
-        margin-top: 0.3rem;
-        position: relative;
-    }
-    .auditoria-bloque + .auditoria-bloque::before {
-        content: '';
-        display: block;
-        width: 2px;
-        height: 0.4rem;
-        background: #ced4da;
-        margin: -0.3rem auto 0.1rem 0.7rem;
-    }
-    .auditoria-etiqueta {
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    .auditoria-cuerpo { font-size: 0.95rem; word-wrap: break-word; white-space: normal; }
-    .auditoria-fecha { font-size: 0.7rem; color: #868e96; margin-top: 0.2rem; }
-    .auditoria-original {
-        background: #f1f3f5;
-        border-left: 3px solid #adb5bd;
-    }
-    .auditoria-original .auditoria-etiqueta { color: #495057; }
-    .auditoria-edicion {
-        background: #e7f5ff;
-        border-left: 3px solid #339af0;
-    }
-    .auditoria-edicion .auditoria-etiqueta { color: #1971c2; }
-    .auditoria-eliminado {
-        background: #fff5f5;
-        border-left: 3px solid #fa5252;
-    }
-    .auditoria-eliminado .auditoria-etiqueta { color: #c92a2a; }
-    .auditoria-sin-datos {
-        background: #fff9db;
-        border-left: 3px solid #fcc419;
-        color: #856404;
-        font-size: 0.85rem;
-    }
-
     .comentario-edicion { margin-top: 0.5rem; }
-    .input-edicion { width: 100%; padding: 0.5rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
+    .input-edicion { width: 100%; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 8px; }
     .edicion-botones { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
-    .foro-footer {padding-top: 1rem; border-top: 1px solid var(--color-border, #dee2e6); }
+    .foro-footer { padding-top: 1rem; border-top: 1px solid var(--color-border, #dee2e6); }
     .foro-nuevo { display: flex; flex-direction: row; gap: 0.5rem; }
-    .input-nuevo { width: 90%; padding: 0.75rem; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
+    .input-nuevo { width: 90%; border: 1px solid var(--color-border, #dee2e6); border-radius: 8px; }
     .btn-enviar { align-self: flex-end; }
 
     .reply-banner {
@@ -452,7 +334,6 @@
         line-height: 1.35;
     }
 
-
     .reply-quoted {
         background-color: #f8f9fa;
         border-left: 3px solid #ced4da;
@@ -469,8 +350,8 @@
     }
 
     .reply-quoted-name {
-        font-weight: 300;
-        color: var(--color-primary, #0d6efd);
+        font-weight: 700;
+        color: #0d6efd;
     }
 
     .reply-quoted-text {
@@ -482,32 +363,6 @@
         font-weight: 600;
         color: #495057;
         margin: 0.35rem 0 0.15rem 0;
-    }
-
-    .comentario-auditoria {
-        margin-top: 0.25rem;
-        font-size: 0.8rem;
-    }
-
-    .lista-historial {
-        list-style: none;
-        padding-left: 0;
-        margin: 0.25rem 0 0 0;
-        border-top: 1px solid #e9ecef;
-        padding-top: 0.25rem;
-    }
-
-    .lista-historial li {
-        margin-bottom: 0.35rem;
-    }
-
-    .hist-fecha {
-        font-size: 0.75rem;
-        color: #6c757d;
-    }
-
-    .hist-contenido {
-        font-size: 0.85rem;
     }
 
     /* Responsive */
@@ -524,9 +379,6 @@
         }
         .foro-header-left h1 {
             font-size: 1.3rem;
-        }
-        .foro-header-materia {
-            font-size: 0.85rem;
         }
         .foro-search-input {
             width: 100%;
@@ -572,6 +424,11 @@
         }
         .input-nuevo {
             font-size: 0.9rem;
+            padding: 0.5rem;
+        }
+        .input-nuevo {
+            font-size: 0.9rem;
+            padding: 0.5rem;
         }
         .btn-enviar {
             width: 100%;
@@ -583,7 +440,6 @@
     [Parameter] public int IdAsignacionAcademica { get; set; }
 
     private List<ForoDto> comentarios = new();
-    private bool modoAuditoria;
     private List<AsignaturaDto> asignaturas = new();
     private AsignaturaDto? asignaturaActual;
     private string terminoBusquedaForo = string.Empty;
@@ -594,10 +450,7 @@
     private string textoEditado = string.Empty;
     private HubConnection? _hubConnection;
 
-    // Auditoría
-    private Dictionary<int, List<ForoHistorialDto>> historialPorComentario = new();
-
-    // Respuesta tipo WhatsApp (solo visual)
+    // Respuesta tipo WhatsApp (solo visual, sin cambios de esquema)
     private ForoDto? mensajeRespondiendo;
     private int _ultimoIdAsignacion;
 
@@ -613,16 +466,17 @@
 
         await RecargarComentarios();
 
-        // Cargar asignaturas del docente para mostrar nombre de materia actual
+        // Cargar asignaturas del estudiante para mostrar nombre de materia actual
         // y habilitar búsqueda rápida de otros foros por nombre.
         try
         {
-            asignaturas = await AsignaturaService.ObtenerAsignaturasPorProfesor(userId);
+            // TODO: Fix - method doesn't exist on AsignaturaService yet
+            // asignaturas = await AsignaturaService.ObtenerAsignaturasPorEstudiante(userId);
             asignaturaActual = asignaturas.FirstOrDefault(a => a.IdAsignacionAcademica == IdAsignacionAcademica);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al cargar asignaturas para el foro: {ex.Message}");
+            Console.WriteLine($"Error al cargar asignaturas para el foro (estudiante): {ex.Message}");
         }
 
         var baseUrl = Http.BaseAddress?.ToString()?.TrimEnd('/') ?? "";
@@ -669,40 +523,14 @@
 
     private async Task RecargarComentarios()
     {
-        // En plataforma académica usamos la vista de docente (incluye eliminados)
-        comentarios = await ForoService.ObtenerPorAsignacionDocenteAsync(IdAsignacionAcademica);
-        // Siempre cargar historial de mensajes editados/eliminados para mostrar en la card
-        await CargarHistorialesParaMensajesConCambios();
+        comentarios = await ForoService.ObtenerPorAsignacionAsync(IdAsignacionAcademica);
     }
 
-    private IEnumerable<ForoDto> comentariosVisibles =>
-        modoAuditoria ? comentarios : comentarios.Where(c => !c.Eliminado);
+    /// <summary>Comentarios a mostrar: sin eliminados (los mensajes eliminados desaparecen de la lista).</summary>
+    private IEnumerable<ForoDto> comentariosVisibles => comentarios.Where(c => !c.Eliminado);
 
-    private async Task OnAuditoriaChanged(ChangeEventArgs e)
-    {
-        modoAuditoria = e.Value as bool? ?? false;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>Carga el historial (original, ediciones, eliminado) para mensajes editados o eliminados.</summary>
-    private async Task CargarHistorialesParaMensajesConCambios()
-    {
-        historialPorComentario.Clear();
-        var ids = comentarios
-            .Where(c => c.Editado || c.Eliminado)
-            .Select(c => c.Id)
-            .Distinct()
-            .ToList();
-        foreach (var id in ids)
-        {
-            historialPorComentario[id] = await ForoService.ObtenerHistorialAsync(id);
-        }
-    }
-
-    /// <summary>Título del foro como en el h1: Nombre (Grupo).</summary>
     private static string TituloForo(AsignaturaDto a) => $"{a.Nombre} ({a.Grupo})";
 
-    /// <summary>Resultados que coinciden con el término (nombre o título completo).</summary>
     private IEnumerable<AsignaturaDto> ResultadosBusquedaForo
     {
         get
@@ -726,7 +554,6 @@
         var resultados = ResultadosBusquedaForo.ToList();
         if (resultados.Count == 0) return;
 
-        // Enter: ir al primero de la lista
         var destino = resultados[0];
         terminoBusquedaForo = string.Empty;
         Navigation.NavigateTo($"/dashboard/foro/{destino.IdAsignacionAcademica}");
@@ -747,7 +574,7 @@
         // Solo se envía el texto nuevo; la respuesta se guarda en BD como id_foro_referencia + mensaje (sin HTML).
         var texto = nuevoComentario.Trim();
 
-        CrearComentarioForoRequest request = new CrearComentarioForoRequest
+        var request = new CrearComentarioForoRequest
         {
             IdAsignacionAcademica = IdAsignacionAcademica,
             IdPersona = userId,

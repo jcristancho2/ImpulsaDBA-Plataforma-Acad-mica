@@ -5,12 +5,20 @@
 
 @if (Mostrar)
 {
-    <div class="modal-overlay" @onclick="CerrarModal" style="z-index: 9999;">
-        <div class="modal-container" @onclick:stopPropagation="true">
+    <div class="modal-overlay" 
+         @onclick="CerrarModal" 
+         style="z-index: 9999;"
+         role="presentation">
+        <div class="modal-container" 
+             @onclick:stopPropagation="true"
+             @onkeydown="OnModalKeyDown"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-titulo-actividad">
             <div class="modal-header">
-                <h3>Crear Nueva Actividad</h3>
-                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
-                    <i class="bi bi-x-lg"></i>
+                <h2 id="modal-titulo-actividad">Crear Nueva Actividad</h2>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar" aria-label="Cerrar diálogo de creación de actividad">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -29,11 +37,13 @@
                     <div class="tipos-actividades">
                         @foreach (var tipo in tiposActividades)
                         {
-                            <div class="tipo-actividad-item"
-                                 @onclick="() => SeleccionarTipo(tipo)">
-                                <i class="bi @tipo.Icono"></i>
+                            <button type="button"
+                                    class="tipo-actividad-item"
+                                    aria-label="Seleccionar actividad @tipo.Nombre"
+                                    @onclick="() => SeleccionarTipo(tipo)">
+                                <i class="bi @tipo.Icono" aria-hidden="true"></i>
                                 <span>@tipo.Nombre</span>
-                            </div>
+                            </button>
                         }
                     </div>
                 </div>
@@ -254,6 +264,17 @@
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Manejar teclas en el modal para accesibilidad (ESC cierra modal)
+    /// </summary>
+    private async Task OnModalKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CerrarModal();
         }
     }
 }

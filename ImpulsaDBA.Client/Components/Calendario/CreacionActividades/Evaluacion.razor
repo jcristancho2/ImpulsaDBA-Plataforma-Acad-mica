@@ -10,10 +10,17 @@
 
 @if (Mostrar)
 {
-    <div class="modal-overlay" @onclick="CerrarModal">
-        <div class="modal-container" @onclick:stopPropagation="true">
+    <div class="modal-overlay" 
+         @onclick="CerrarModal"
+         role="presentation">
+        <div class="modal-container" 
+             @onclick:stopPropagation="true"
+             @onkeydown="OnModalKeyDown"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-evaluacion-title">
             <div class="modal-header">
-                <h3>@(modoSoloLectura ? "Ver" : (esModoEdicion ? "Editar" : "Crear")) Evaluación</h3>
+                <h2 id="modal-evaluacion-title">@(modoSoloLectura ? "Ver" : (esModoEdicion ? "Editar" : "Crear")) Evaluación</h2>
                 <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -42,14 +49,16 @@
                     <div class="form-group mb-3">
                         <label for="titulo-actividad">Título</label>
                         <input type="text" class="form-control" id="titulo-actividad"
+                               aria-describedby="validation-titulo"
                                @bind="actividad.Titulo" disabled="@modoSoloLectura" />
-                        <ValidationMessage For="@(() => actividad.Titulo)" />
+                        <ValidationMessage Id="validation-titulo" For="@(() => actividad.Titulo)" />
                     </div>
 
                     <div class="mb-3">
                         <label for="fecha-actividad" class="form-label">Fecha Calendario</label>
                         <div class="input-group">
                             <input type="datetime-local" id="fecha-actividad" class="form-control"
+                                   aria-describedby="validation-fecha"
                                    @bind="actividad.FechaPublicacion" 
                                    min="@DateTime.Today.ToString("yyyy-MM-ddTHH:mm")"
                                    disabled="@modoSoloLectura" />
@@ -57,7 +66,7 @@
                                 <i class="bi bi-calendar"></i>
                             </span>
                         </div>
-                        <ValidationMessage For="@(() => actividad.FechaPublicacion)" />
+                        <ValidationMessage Id="validation-fecha" For="@(() => actividad.FechaPublicacion)" />
                         @if (!esModoEdicion && !modoSoloLectura && actividad.FechaPublicacion.HasValue && actividad.FechaPublicacion.Value.Date < DateTime.Today)
                         {
                             <small class="text-danger">La fecha no puede ser anterior a hoy.</small>
@@ -67,10 +76,11 @@
                     <div class="form-group mb-3">
                         <label for="instrucciones-actividad">Instrucciones adicionales:</label>
                         <textarea class="form-control" id="instrucciones-actividad" rows="5"
+                                  aria-describedby="validation-descripcion"
                                   @bind="actividad.Descripcion" 
                                   placeholder="Ingrese las instrucciones para la evaluación..."
                                   disabled="@modoSoloLectura"></textarea>
-                        <ValidationMessage For="@(() => actividad.Descripcion)" />
+                        <ValidationMessage Id="validation-descripcion" For="@(() => actividad.Descripcion)" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(MensajeProcesos))
@@ -491,6 +501,14 @@
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();
+        }
+    }
+
+    private async Task OnModalKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CerrarModal();
         }
     }
 }

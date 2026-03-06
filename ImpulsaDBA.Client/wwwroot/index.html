@@ -9,6 +9,99 @@
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/bootstrap-icons/bootstrap-icons.css" />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/accessibility.css" />
+    <link rel="stylesheet" href="css/accessibility-bar.css" />
+    <script>
+        window.impulsaAcc = {
+            // Alto Contraste
+            setHighContrast: function (enabled) {
+                const root = document.documentElement;
+                const body = document.body;
+                if (enabled) {
+                    root.classList.add('high-contrast');
+                    if (body) body.classList.add('high-contrast');
+                } else {
+                    root.classList.remove('high-contrast');
+                    if (body) body.classList.remove('high-contrast');
+                }
+            },
+            
+            // Tamaño de Fuente - 5 opciones (0-4)
+            setFontSize: function (sizeIndex) {
+                const fontClasses = ['font-size-0875', 'font-size-1', 'font-size-1125', 'font-size-1325', 'font-size-1525'];
+                const root = document.documentElement;
+                
+                // Remover todas las clases de tamaño
+                fontClasses.forEach(className => {
+                    root.classList.remove(className);
+                });
+                
+                // Aplicar la clase correspondiente 
+                if (sizeIndex >= 0 && sizeIndex < fontClasses.length) {
+                    root.classList.add(fontClasses[sizeIndex]);
+                }
+            },
+            
+            // Guardar y recuperar tamaño de fuente
+            saveFontSize: function (sizeIndex) {
+                try {
+                    localStorage.setItem('impulsaAcc_fontSize', sizeIndex.toString());
+                } catch { }
+            },
+            
+            getFontSize: function (defaultValue) {
+                try {
+                    const saved = localStorage.getItem('impulsaAcc_fontSize');
+                    return saved !== null ? parseInt(saved, 10) : defaultValue;
+                } catch {
+                    return defaultValue;
+                }
+            },
+            
+            // Guardar y recuperar flags booleanos
+            saveFlag: function (key, value) {
+                try {
+                    localStorage.setItem('impulsaAcc_' + key, value ? '1' : '0');
+                } catch { }
+            },
+            
+            getFlag: function (key) {
+                try {
+                    return localStorage.getItem('impulsaAcc_' + key) === '1';
+                } catch {
+                    return false;
+                }
+            },
+            
+            // Compatibilidad con setLargeText (deprecated)
+            setLargeText: function (enabled) {
+                const root = document.documentElement;
+                if (enabled) {
+                    root.classList.add('large-text');
+                } else {
+                    root.classList.remove('large-text');
+                }
+            }
+        };
+        
+        // Cargar preferencias de accesibilidad inmediatamente al cargar la página
+        (function() {
+            try {
+                // Cargar alto contraste
+                if (localStorage.getItem('impulsaAcc_high-contrast') === '1') {
+                    window.impulsaAcc.setHighContrast(true);
+                }
+                
+                // Cargar tamaño de fuente
+                const savedFontSize = localStorage.getItem('impulsaAcc_fontSize');
+                if (savedFontSize !== null) {
+                    window.impulsaAcc.setFontSize(parseInt(savedFontSize, 10));
+                }
+            } catch(e) {
+                console.error('Error al cargar preferencias de accesibilidad:', e);
+            }
+        })();
+    </script>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="ImpulsaDBA.styles.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,15 +113,12 @@
     <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
     <meta name="theme-color" content="#03173d" />
+    <script src="js/theme.js"></script>
 </head>
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div id="mosaic-loader-root"></div>
     </div>
 
     <div id="blazor-error-ui">
@@ -41,6 +131,7 @@
     <script src="js/calendario-dragdrop.js"></script>
     <script src="js/bootstrap.bundle.min.js"></script>
     <script src="_content/CurrieTechnologies.Razor.SweetAlert2/sweetAlert2.min.js"></script>
+    <script src="js/mosaic-loader.js"></script>
     <!-- QuillJS para editor de texto enriquecido -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script>

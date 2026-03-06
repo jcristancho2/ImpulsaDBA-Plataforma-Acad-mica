@@ -6,12 +6,19 @@
 
 @if (Mostrar)
 {
-    <div class="modal-overlay" @onclick="CerrarModal">
-        <div class="modal-container" @onclick:stopPropagation="true">
+    <div class="modal-overlay" 
+         @onclick="CerrarModal"
+         role="presentation">
+        <div class="modal-container" 
+             @onclick:stopPropagation="true"
+             @onkeydown="OnModalKeyDown"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-password-recovery-title">
             <div class="modal-header">
-                <h3>Recuperar Contraseña</h3>
-                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar">
-                    <i class="bi bi-x-lg"></i>
+                <h2 id="modal-password-recovery-title">Recuperar Contraseña</h2>
+                <button class="btn-cerrar" @onclick="CerrarModal" title="Cerrar" aria-label="Cerrar diálogo de recuperación de contraseña">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
             </div>
 
@@ -38,27 +45,30 @@
                             <InputText id="email" 
                                     type="email" 
                                     class="form-control" 
+                                    aria-describedby="validation-email"
                                     @bind-Value="validacionModel.Email" 
                                     placeholder="correo@ejemplo.com" />
-                            <ValidationMessage For="@(() => validacionModel.Email)" />
+                            <ValidationMessage Id="validation-email" For="@(() => validacionModel.Email)" />
                         </div>
 
                         <div class="form-group">
                             <label for="celular">Número de Celular</label>
                             <InputText id="celular" 
                                     class="form-control" 
+                                    aria-describedby="validation-celular"
                                     @bind-Value="validacionModel.Celular" 
                                     placeholder="3001234567" />
-                            <ValidationMessage For="@(() => validacionModel.Celular)" />
+                            <ValidationMessage Id="validation-celular" For="@(() => validacionModel.Celular)" />
                         </div>
 
                         <div class="form-group">
                             <label for="nroDocumento">Número de Documento</label>
                             <InputText id="nroDocumento" 
                                     class="form-control" 
+                                    aria-describedby="validation-nroDocumento"
                                     @bind-Value="validacionModel.NroDocumento" 
                                     placeholder="1234567890" />
-                            <ValidationMessage For="@(() => validacionModel.NroDocumento)" />
+                            <ValidationMessage Id="validation-nroDocumento" For="@(() => validacionModel.NroDocumento)" />
                         </div>
 
                         <div class="modal-footer">
@@ -101,9 +111,10 @@
                             <InputText id="nuevaContrasena" 
                                     type="password" 
                                     class="form-control" 
+                                    aria-describedby="validation-nuevaContrasena"
                                     @bind-Value="cambioModel.NuevaContrasena" 
                                     placeholder="Mínimo 6 caracteres" />
-                            <ValidationMessage For="@(() => cambioModel.NuevaContrasena)" />
+                            <ValidationMessage Id="validation-nuevaContrasena" For="@(() => cambioModel.NuevaContrasena)" />
                         </div>
 
                         <div class="form-group">
@@ -111,9 +122,10 @@
                             <InputText id="confirmarContrasena" 
                                     type="password" 
                                     class="form-control" 
+                                    aria-describedby="validation-confirmarContrasena"
                                     @bind-Value="cambioModel.ConfirmarContrasena" 
                                     placeholder="Repita la contraseña" />
-                            <ValidationMessage For="@(() => cambioModel.ConfirmarContrasena)" />
+                            <ValidationMessage Id="validation-confirmarContrasena" For="@(() => cambioModel.ConfirmarContrasena)" />
                         </div>
 
                         <div class="modal-footer">
@@ -235,6 +247,14 @@
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();
+        }
+    }
+
+    private async Task OnModalKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CerrarModal();
         }
     }
 }

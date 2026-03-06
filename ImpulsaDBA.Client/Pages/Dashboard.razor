@@ -13,13 +13,16 @@
 <PageTitle>Dashboard - ImpulsaDBA</PageTitle>
 
 <div class="dashboard-page">
+    <!-- Encabezado principal único -->
+    <div class="page-header">
+        <h1>Dashboard</h1>
+    </div>
+    
     @if (VistaActual == "inicio")
     {
         <!-- Vista Inicio -->
-        <div class="page-header">
-            <h1>Bienvenido</h1>
-        </div>
-        <div class="welcome-content">
+        <div class="welcome-section">
+            <h2>Bienvenido</h2>
             <p>Selecciona una opción del menú lateral para comenzar.</p>
         </div>
     }
@@ -50,7 +53,7 @@
         {
             <div class="page-header">
                 <div class="page-header-left">
-                    <h1>Mis Asignaturas</h1>
+                    <h2>Mis Asignaturas</h2>
                     <div class="page-subtitle">
                         <span>Periodo académico actual: Periodo @periodoActual - @anioActual</span>
                         <span class="asignaturas-count">@asignaturas.Count Asignatura(s) asignada(s)</span>
@@ -75,6 +78,9 @@
     .dashboard-page {
         max-width: 1400px;
         margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
     }
 
     .page-header {

@@ -320,6 +320,351 @@ html {
     -webkit-text-size-adjust: 100%;
 }
 
+:root.high-contrast {
+    /* Fondos: Negro para fondo, Blanco para texto */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #ffffff;
+    --color-bg-dark: #000000;
+    --color-bg-light: #ffffff;
+
+    /* Textos: Alto contraste 21:1 */
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #ffffff;
+    --color-text-muted: #ffffff;
+    --color-text-white: #000000;
+    --color-text-light: #000000;
+
+    /* Bordes: Blancos sólidos */
+    --color-border: #ffffff;
+    --color-border-light: #ffffff;
+    --color-border-dark: #ffffff;
+    --color-border-focus: #ffff00;
+
+    /* Colores de input */
+    --color-login-bg: #000000;
+    --color-login-box: #000000;
+    --color-login-text-primary: #ffffff;
+    --color-login-text-secondary: #ffffff;
+    --color-login-input-bg: #000000;
+    --color-login-input-text: #ffffff;
+    --color-login-input-border: #ffffff;
+    --color-login-placeholder: #ffffff;
+    --color-login-button: #ffffff;
+    --color-login-button-hover: #ffff00;
+
+    /* Estados: Colores vibrantes */
+    --color-primary: #ffff00;
+    --color-primary-dark: #cccc00;
+    --color-primary-light: #ffff00;
+    --color-primary-hover: #ffff00;
+    --color-secondary: #ffffff;
+    --color-success: #00ff00;
+    --color-warning: #ffff00;
+    --color-danger: #ff0000;
+    --color-info: #00ffff;
+
+    /* Sombras eliminadas en alto contraste */
+    --color-shadow: transparent;
+    --color-shadow-light: transparent;
+    --color-shadow-dark: transparent;
+
+    /* Placeholder */
+    --color-placeholder: #ffffff;
+    --color-placeholder-light: #ffffff;
+}
+
+/* ============================================
+   ESTILOS GLOBALES PARA ALTO CONTRASTE
+   Aplicar colores específicos a todos los elementos
+   ============================================ */
+:root.high-contrast,
+:root.high-contrast body {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+:root.high-contrast button,
+:root.high-contrast input[type="button"],
+:root.high-contrast input[type="submit"],
+:root.high-contrast input[type="reset"] {
+    background-color: #ffff00;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast button:hover,
+:root.high-contrast input[type="button"]:hover,
+:root.high-contrast input[type="submit"]:hover,
+:root.high-contrast input[type="reset"]:hover {
+    background-color: #ffff00;
+    color: #000000;
+}
+
+:root.high-contrast button:focus,
+:root.high-contrast input[type="button"]:focus,
+:root.high-contrast input[type="submit"]:focus,
+:root.high-contrast input[type="reset"]:focus {
+    outline-color: #ffff00;
+    outline-width: 3px;
+}
+
+:root.high-contrast input,
+:root.high-contrast textarea,
+:root.high-contrast select {
+    background-color: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast input::placeholder,
+:root.high-contrast textarea::placeholder {
+    color: #ffffff;
+}
+
+:root.high-contrast a {
+    color: #00ffff;
+    text-decoration: underline;
+}
+
+:root.high-contrast a:visited {
+    color: #00ff00;
+}
+
+:root.high-contrast a:focus {
+    outline: 3px solid #ffff00;
+    outline-offset: 2px;
+}
+
+:root.high-contrast .btn-primary {
+    background-color: #ffff00;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .btn-primary:hover {
+    background-color: #ffff00;
+    color: #000000;
+}
+
+:root.high-contrast .btn-secondary {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .btn-success {
+    background-color: #00ff00;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .btn-danger {
+    background-color: #ff0000;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .btn-warning {
+    background-color: #ffff00;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .btn-info {
+    background-color: #00ffff;
+    color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .alert {
+    border-width: 2px;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .alert-primary {
+    background-color: #000000;
+    color: #ffff00;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .alert-success {
+    background-color: #000000;
+    color: #00ff00;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .alert-danger {
+    background-color: #000000;
+    color: #ff0000;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .alert-warning {
+    background-color: #000000;
+    color: #ffff00;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .alert-info {
+    background-color: #000000;
+    color: #00ffff;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .card {
+    background-color: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .card-header {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .card-footer {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .modal-content {
+    background-color: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .modal-header {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .modal-footer {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .nav-link {
+    color: #ffffff;
+}
+
+:root.high-contrast .nav-link:hover {
+    color: #ffff00;
+}
+
+:root.high-contrast .nav-link.active {
+    color: #ffff00;
+    border-color: #ffff00;
+}
+
+:root.high-contrast .table {
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .table th {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+:root.high-contrast .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #0a0a0a;
+}
+
+:root.high-contrast .table-striped > tbody > tr:nth-of-type(even) {
+    background-color: #1a1a1a;
+}
+
+:root.high-contrast hr {
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast label {
+    color: #ffffff;
+}
+
+:root.high-contrast .form-control {
+    background-color: #000000;
+    color: #ffffff;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+:root.high-contrast .form-control:focus {
+    background-color: #000000;
+    color: #ffffff;
+    border-color: #ffff00;
+    box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.5);
+}
+
+:root.large-text {
+    /* Tamaños base aumentados */
+    --text-base: 1.125rem;
+    --text-lg: 1.3rem;
+    --text-xl: 1.5rem;
+    --text-2xl: 1.7rem;
+    --text-3xl: 2rem;
+}
+
+:root.font-size-0875 {
+    /* 87.5% - Muy pequeño */
+    --text-base: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.125rem;
+    --text-2xl: 1.25rem;
+}
+
+:root.font-size-1 {
+    /* 100% - Normal (default) */
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.35rem;
+}
+
+:root.font-size-1125 {
+    /* 112.5% - Grande */
+    --text-base: 1.125rem;
+    --text-lg: 1.25rem;
+    --text-xl: 1.35rem;
+    --text-2xl: 1.5rem;
+}
+
+:root.font-size-1325 {
+    /* 132.5% - Más grande */
+    --text-base: 1.325rem;
+    --text-lg: 1.45rem;
+    --text-xl: 1.55rem;
+    --text-2xl: 1.7rem;
+}
+
+:root.font-size-1525 {
+    /* 152.5% - Muy grande */
+    --text-base: 1.525rem;
+    --text-lg: 1.65rem;
+    --text-xl: 1.75rem;
+    --text-2xl: 2rem;
+}
+
 body {
     max-width: 100vw;
     overflow-x: hidden;
@@ -487,6 +832,96 @@ a,
 .loading-progress-text:after {
     content: var(--blazor-load-percentage-text, "Loading");
 }
+
+/* ============================================
+   Mosaic loading screen (index.html)
+   ============================================ */
+
+.mosaic-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+    color: #e5e7eb;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.mosaic-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.mosaic-grid {
+    display: grid;
+    gap: 3px;
+    width: min(520px, 90vw);
+    aspect-ratio: 16 / 10;
+}
+
+.mosaic-cell {
+    position: relative;
+    overflow: hidden;
+}
+
+.mosaic-tile {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 220ms ease-out, opacity 220ms ease-out, background-color 280ms ease-out;
+    background: #0f172a;
+}
+
+.mosaic-tile.visible {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.mosaic-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.mosaic-text {
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+
+.mosaic-progress-track {
+    width: 260px;
+    max-width: 80vw;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.35);
+    overflow: hidden;
+}
+
+.mosaic-progress-bar {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e, #06b6d4, #6366f1);
+    transition: width 120ms ease-out;
+}
+
+.mosaic-percentage {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.tile-primary { background: #22c55e; }
+.tile-accent { background: #06b6d4; }
+.tile-secondary { background: #6366f1; }
+.tile-muted { background: #4b5563; }
+.tile-card { background: #0f172a; }
 
 code {
     color: #c02d76;

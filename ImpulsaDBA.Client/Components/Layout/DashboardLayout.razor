@@ -1,5 +1,6 @@
 @namespace ImpulsaDBA.Client.Components.Layout
 @inherits LayoutComponentBase
+@using ImpulsaDBA.Client.Components.Shared
 @using Microsoft.AspNetCore.Components.Authorization
 @using Blazored.LocalStorage
 @using ImpulsaDBA.Client.Services
@@ -60,38 +61,44 @@
                     </div>
                 }
             </div>
-            <button class="nav-item @GetVistaActiveClass("inicio")" @onclick="@(() => MostrarVista("inicio"))">
+            <button class="nav-item @GetVistaActiveClass("inicio")" @onclick="@(() => MostrarVista("inicio"))" title="Inicio" aria-label="Ir a inicio">
                 <i class="bi bi-house-fill nav-icon"></i>
                 <span class="nav-text">Inicio</span>
+                <span class="nav-item-tooltip">Inicio</span>
             </button>
-            <button class="nav-item @GetVistaActiveClass("asignaturas")" @onclick="@(() => MostrarVista("asignaturas"))">
+            <button class="nav-item @GetVistaActiveClass("asignaturas")" @onclick="@(() => MostrarVista("asignaturas"))" title="Mis asignaturas" aria-label="Ver mis asignaturas">
                 <i class="bi bi-book-fill nav-icon"></i>
                 <span class="nav-text">Mis Asignaturas</span>
+                <span class="nav-item-tooltip">Mis asignaturas</span>
             </button>
-            <button class="nav-item @GetVistaActiveClass("calendario")" @onclick="@(() => MostrarVista("calendario"))">
+            <button class="nav-item @GetVistaActiveClass("calendario")" @onclick="@(() => MostrarVista("calendario"))" title="Calendario" aria-label="Ver calendario">
                 <i class="bi bi-calendar3 nav-icon"></i>
                 <span class="nav-text">Calendario</span>
+                <span class="nav-item-tooltip">Calendario</span>
             </button>
             @*<button class="nav-item @GetVistaActiveClass("calificar")" @onclick="@(() => MostrarVista("calificar"))">
                 <i class="bi bi-clipboard-check nav-icon"></i>
                 <span class="nav-text">Calificar actividades</span>
             </button>
             *@
-            <button class="nav-item @GetVistaActiveClass("duplicar")" @onclick="@(() => MostrarVista("duplicar"))">
+            <button class="nav-item @GetVistaActiveClass("duplicar")" @onclick="@(() => MostrarVista("duplicar"))" title="Duplicar actividades" aria-label="Duplicar actividades">
                 <i class="bi bi-copy nav-icon"></i>
                 <span class="nav-text">Duplicar actividades</span>
+                <span class="nav-item-tooltip">Duplicar actividades</span>
             </button>
-            <a href="/dashboard/foro" class="nav-item @(EsRutaActivaForo() ? "active" : "")">
+            <a href="/dashboard/foro" class="nav-item @(EsRutaActivaForo() ? "active" : "")" title="Foro" aria-label="Ir al foro">
                 <i class="bi bi-chat-dots nav-icon"></i>
                 <span class="nav-text">Foro</span>
+                <span class="nav-item-tooltip">Foro</span>
             </a>
         </nav>
         
         <div class="sidebar-footer">
 
-            <button class="nav-item nav-logout" @onclick="Salir">
+            <button class="nav-item nav-logout" @onclick="Salir" title="Cerrar sesión" aria-label="Cerrar sesión">
                 <i class="bi bi-box-arrow-right nav-icon"></i>
                 <span class="nav-text">Salir</span>
+                <span class="nav-item-tooltip">Cerrar sesión</span>
             </button>
         </div>
     </aside>
@@ -138,12 +145,17 @@
         </header>
 
         <!-- Content -->
-        <main class="dashboard-content">
+        <main id="contenido-principal" class="dashboard-content" tabindex="-1">
             <CascadingValue Value="vistaActual" Name="VistaActual">
                 <CascadingValue Value="this" Name="DashboardLayout">
                     @Body
                 </CascadingValue>
             </CascadingValue>
+
+            <!-- Accessibility Bar (Pantallas Dashboard) -->
+            <div class="accessibility-bar-container">
+                <AccessibilityHeader />
+            </div>
         </main>
     </div>
 </div>
@@ -266,12 +278,12 @@
         // Navegar a la ruta correspondiente
         var ruta = vista switch
         {
-            "inicio" => "/dashboard/inicio",
-            "asignaturas" => "/dashboard/asignaturas",
-            "calendario" => "/dashboard/calendario",
-                "calificar" => "/dashboard/calificar-actividades",
-            "duplicar" => "/dashboard/duplicar-actividades",
-            _ => "/dashboard/inicio"
+            "inicio" => "inicio",
+            "asignaturas" => "asignaturas",
+            "calendario" => "calendario",
+                "calificar" => "calificar-actividades",
+            "duplicar" => "duplicar actividades",
+            _ => "inicio"
         };
         
         Navigation.NavigateTo(ruta, forceLoad: false);

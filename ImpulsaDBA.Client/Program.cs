@@ -53,5 +53,20 @@ builder.Services.AddScoped<AsignaturaService>();
 builder.Services.AddScoped<CalendarioService>();
 builder.Services.AddScoped<AyudaService>();
 builder.Services.AddScoped<ForoService>();
+builder.Services.AddScoped<ThemeService>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Cargar paleta de colores al iniciar la aplicación
+try
+{
+    using var scope = host.Services.CreateScope();
+    var themeService = scope.ServiceProvider.GetRequiredService<ThemeService>();
+    await themeService.CargarYAplicarPaletaAsync();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error al inicializar la paleta de colores: {ex.Message}");
+}
+
+await host.RunAsync();

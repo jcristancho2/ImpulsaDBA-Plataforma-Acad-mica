@@ -71,7 +71,11 @@
                 @foreach (var act in actividades)
                 {
                     <div class="actividad-card">
-                        <div class="actividad-header" @onclick="() => ToggleActividad(act.Id)">
+                        <button type="button"
+                                class="actividad-header"
+                                aria-expanded="@(actividadExpandida == act.Id ? "true" : "false")"
+                                aria-controls="entregas-@act.IdRecurso"
+                                @onclick="() => ToggleActividad(act.Id)">
                             <div class="actividad-info">
                                 <strong>@act.Titulo</strong>
                                 <span class="actividad-meta">@act.NombreAsignatura · @act.NombreGrupo</span>
@@ -82,10 +86,10 @@
                             </div>
                             <span class="badge-pendientes">@act.Pendientes pendientes</span>
                             <i class="bi @(actividadExpandida == act.Id ? "bi-chevron-up" : "bi-chevron-down")"></i>
-                        </div>
+                        </button>
                         @if (actividadExpandida == act.Id)
                         {
-                            <div class="actividad-entregas">
+                            <div class="actividad-entregas" id="entregas-@act.IdRecurso">
                                 @if (entregasPorActividad.TryGetValue(act.IdRecurso, out var entregas) && entregas.Any())
                                 {
                                     <table class="tabla-entregas">
@@ -150,6 +154,9 @@
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem 1rem;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
     }
 
     .page-header {
