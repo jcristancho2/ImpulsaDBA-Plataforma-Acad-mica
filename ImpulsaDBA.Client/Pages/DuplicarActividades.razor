@@ -5,9 +5,11 @@
 @using ImpulsaDBA.Shared.DTOs
 @using ImpulsaDBA.Shared.Requests
 @using ImpulsaDBA.Client.Services
+@using Microsoft.JSInterop
 @inject AuthenticationStateProvider AuthStateProvider
 @inject AsignaturaService AsignaturaService
 @inject CalendarioService CalendarioService
+@inject IJSRuntime JS
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Duplicar actividades - ImpulsaDBA</PageTitle>
@@ -76,11 +78,16 @@
 @* Modal: destinos (otros cursos con la misma asignatura) con fecha y hora *@
 @if (mostrarModalDestinos && actividadSeleccionada != null)
 {
-    <div class="modal-overlay" @onclick="CerrarModalDestinos">
-        <div class="modal-container modal-large" @onclick:stopPropagation="true">
+    <div class="modal-overlay" @onclick="CerrarModalDestinos" role="presentation">
+        <div id="modal-duplicar-destinos-container" class="modal-container modal-large" 
+             @onclick:stopPropagation="true"
+             @onkeydown="OnModalDestinosKeyDown"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-duplicar-titulo">
             <div class="modal-header">
-                <h3>Duplicar: @actividadSeleccionada.Titulo</h3>
-                <button type="button" class="btn-close" @onclick="CerrarModalDestinos" aria-label="Cerrar"></button>
+                <h3 id="modal-duplicar-titulo">Duplicar: @actividadSeleccionada.Titulo</h3>
+                <button type="button" class="btn-close" @onclick="CerrarModalDestinos" aria-label="Cerrar diálogo"></button>
             </div>
             <div class="modal-body">
                 @if (cargandoGrupos)
@@ -313,8 +320,25 @@
         }
     }
 
-    private void CerrarModalDestinos()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (mostrarModalDestinos)
+        {
+            try { await JS.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-duplicar-destinos-container"); } catch { }
+        }
+    }
+
+    private void OnModalDestinosKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _ = CerrarModalDestinos();
+        }
+    }
+
+    private async Task CerrarModalDestinos()
+    {
+        try { await JS.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         mostrarModalDestinos = false;
         actividadSeleccionada = null;
         destinosConFecha = new List<DestinoConFecha>();
@@ -345,7 +369,7 @@
             mensajeTexto = "Actividad duplicada correctamente a los cursos seleccionados.";
             mensajeExito = true;
             mostrarMensaje = true;
-            CerrarModalDestinos();
+            await CerrarModalDestinos();
             await CargarActividades();
         }
         catch (Exception ex)

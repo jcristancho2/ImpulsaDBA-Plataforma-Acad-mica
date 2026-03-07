@@ -16,16 +16,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 0.4rem;
     background-color: #0052cc;
     border-radius: 16px 0 0 16px;
     border: 1px solid #0043a8;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    gap: 0.5rem;
+    padding: 0.75rem;
 }
 
 .accessibility-bar.divHighContrast {
-    background-color: #f8f9fa;
+    background-color: var(--color-bg-primary);
 }
 
 /* ============================================
@@ -39,7 +39,7 @@
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background-color: #ffffff;
+    background-color: var(--color-bg-secondary);
     border: none;
     cursor: pointer;
     transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
@@ -49,7 +49,7 @@
 }
 
 .accessibility-bar .icon:hover {
-    background-color: #e6f0ff;
+    background-color: var(--color-bg-secondary);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     transform: translateY(-1px);
 }
@@ -71,14 +71,14 @@
 .accessibility-bar .icon .label {
     font-size: 0.70rem;
     font-weight: 500;
-    color: #495057;
+    color: var(--color-text-secondary);
     line-height: 1.2;
     word-wrap: break-word;
     max-width: 70px;
 }
 
 .accessibility-bar .icon:hover .label {
-    color: #212529;
+    color:var(--color-text-secondary);
 }
 
 /* ============================================
@@ -105,12 +105,12 @@
     transform: translateY(-50%);
     margin-right: 0.5rem;
     white-space: nowrap;
-    background: #1c2635;
-    color: #fff;
+    background: var(--color-bg-dark);
+    color: var(--color-text-white);
     font-size: 0.75rem;
     padding: 0.3rem 0.65rem;
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+    box-shadow: 0 4px 12px var(--color-shadow);
     transition: opacity .18s ease, visibility .18s ease;
     z-index: 100;
 }
@@ -138,39 +138,39 @@
 
 @media (prefers-color-scheme: dark) {
     .accessibility-bar {
-        background-color: #343a40;
-        border-color: #495057;
+        background-color: var(--color-bg-dark);
+        border-color: var(--color-border-dark);
     }
 
     .accessibility-bar.divHighContrast {
-        background-color: #1a1a1a;
-        border-color: #333;
+        background-color: var(--color-bg-dark);
+        border-color: var(--color-border-dark);
     }
 
     .accessibility-bar .icon {
-        color: #adb5bd;
+        color: var(--color-text-secondary);
     }
 
     .accessibility-bar .icon:hover {
-        background-color: #495057;
-        color: #fff;
+        background-color: var(--color-bg-dark);
+        color: var(--color-text-white);
     }
 
     .accessibility-bar .icon:focus-visible {
-        outline-color: #7cb3f5;
-        background-color: #495057;
+        outline-color: var(--color-border-focus);
+        background-color: var(--color-bg-dark);
     }
 
     .accessibility-bar .icon:active {
-        background-color: #6c757d;
+        background-color: var(--color-bg-dark);
     }
 
     .accessibility-bar .icon .label {
-        color: #adb5bd;
+        color: var(--color-text-secondary);
     }
 
     .accessibility-bar .icon:hover .label {
-        color: #fff;
+        color: var(--color-text-white);
     }
 }
 
@@ -181,7 +181,7 @@
 @media (prefers-contrast: more) {
     .accessibility-bar {
         border-width: 2px;
-        border-color: #212529;
+        border-color: var(--color-border-dark);
     }
 
     .accessibility-bar .icon {
@@ -191,7 +191,7 @@
 
     .accessibility-bar .icon:hover,
     .accessibility-bar .icon:focus-visible {
-        border-color: #212529;
+        border-color: var(--color-border-dark);
     }
 
     .accessibility-bar .icon .label {

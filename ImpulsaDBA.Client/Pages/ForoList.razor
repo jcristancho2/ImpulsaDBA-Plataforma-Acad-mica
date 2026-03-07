@@ -36,7 +36,7 @@
         <div class="asignaturas-grid">
             @foreach (var a in asignaturas)
             {
-                <a href="/dashboard/foro/@a.IdAsignacionAcademica" class="card-asignatura card-foro" style="--card-accent: @(string.IsNullOrWhiteSpace(a.ColorHex) ? "#e0e0e0" : a.ColorHex); text-decoration: none; color: inherit;">
+                <a href="/dashboard/foro/@a.IdAsignacionAcademica" class="card-asignatura card-foro" aria-label="Foro de @a.Nombre, grupo @a.Grupo" style="--card-accent: @(string.IsNullOrWhiteSpace(a.ColorHex) ? "#e0e0e0" : a.ColorHex); text-decoration: none; color: inherit;">
                     <div class="card-asignatura-accent"></div>
                     <div class="card-asignatura-body">
                         <h3 class="card-asignatura-titulo">@a.Nombre</h3>
@@ -52,7 +52,7 @@
 </div>
 
 <style>
-    .foro-list-page { max-width: 1100px; margin: 0.5rem auto; overflow-y: auto; }
+    .foro-list-page { max-width: 1300px; margin: 0.5rem auto; overflow-y: auto; width: 100%; box-sizing: border-box; }
     .page-header-asignaturas { margin-bottom: 1.5rem; }
     .page-header-asignaturas h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 0.25rem 0; }
     .page-header-asignaturas .subtitle { color: #666; margin: 0; font-size: 0.95rem; }

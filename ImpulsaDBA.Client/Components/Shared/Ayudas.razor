@@ -11,12 +11,13 @@
 
 <div class="ayudas-dropdown-container" @ref="containerRef">
     <button class="ayudas-button"
+            tooltip-text="Ayuda del módulo"
             @onclick="ToggleDropdown"
             type="button"
             title="Ayuda del módulo"
             aria-label="Abrir menú de ayudas del módulo">
         <span class="ayudas-icon-wrapper">
-            <i class="bi bi-info"></i>
+            <i class="bi bi-question"></i>
         </span>
     </button>
     
@@ -212,8 +213,8 @@
     }
 
     .ayudas-button {
-        width: 45px;
-        height: 45px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         background-color: #006bb7;
         border: none;
@@ -232,15 +233,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        background-color: #006bb7;
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color:transparent;
         position: relative;
     }
     
     .ayudas-icon-wrapper i {
         font-size: 2.5rem;
-        color: white;
+        color: var(--color-warning);
         line-height: 1;
         font-weight: bold;
     }
@@ -248,32 +249,32 @@
     .ayudas-button i:last-child {
         font-size: 2.2rem;
         margin-left: 0px;
-        color: white;
+        color: var(--color-text-white);
     }
 
     .ayudas-button i:last-child {
         font-size: 2rem;
         margin-left: 0px;
-        color: #ffffff;
+        color: var(--color-text-white);
     }
 
     .ayudas-dropdown {
         position: absolute;
         top: calc(100% + 8px);
         right: 0;
-        background: white;
+        background: var(--color-bg-primary);
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         min-width: 120px;
         z-index: 1000;
         overflow: hidden;
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--color-border);
     }
 
     .ayudas-dropdown-item {
         display: block;
         padding: 12px 16px;
-        color: #333;
+        color: var(--color-text-primary);
         text-decoration: none;
         cursor: pointer;
         transition: background-color 0.15s ease;
@@ -284,11 +285,11 @@
     }
 
     .ayudas-dropdown-item:hover {
-        background-color: #f5f5f5;
+        background-color: var(--color-bg-secondary);
     }
 
     .ayudas-dropdown-item-disabled {
-        color: #999;
+        color: var(--color-text-secondary);
         cursor: not-allowed;
     }
 

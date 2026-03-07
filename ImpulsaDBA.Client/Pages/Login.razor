@@ -85,6 +85,252 @@
 <!-- Modal Olvidé Contraseña -->
 <ModalOlvideContrasena Mostrar="@mostrarModalOlvideContrasena" OnCerrar="CerrarModalOlvideContrasena" />
 
+<style>
+    /* Estilos de la página Login (paleta y tipografía desde app.css) */
+    .login-container {
+        min-height: 100vh;
+        background-color: var(--color-login-bg);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .login-box {
+        background-color: var(--color-login-box);
+        width: 100%;
+        max-width: 480px;
+        padding: 48px 40px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+        box-sizing: border-box;
+    }
+
+    .login-header {
+        margin-bottom: 32px;
+        text-align: center;
+    }
+
+    .login-header h1 {
+        color: var(--color-login-text-primary);
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        line-height: 1.3;
+    }
+
+    .login-header p {
+        color: var(--color-login-text-secondary);
+        font-size: var(--text-base);
+        font-weight: 400;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .login-box .form-group {
+        margin-bottom: 24px;
+    }
+
+    .login-box .form-group label {
+        color: var(--color-login-text-primary);
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: var(--text-sm);
+        line-height: 1.5;
+    }
+
+    .login-box .form-control {
+        background-color: var(--color-login-input-bg);
+        color: var(--color-login-input-text);
+        border: 1px solid var(--color-login-input-border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: var(--text-base);
+        width: 100%;
+        transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+        box-sizing: border-box;
+        line-height: 1.5;
+    }
+
+    .login-box .form-control:focus {
+        background-color: var(--color-login-input-bg);
+        color: var(--color-login-input-text);
+        border-color: var(--color-login-button);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(47, 82, 126, 0.1);
+    }
+
+    .login-box .form-control::placeholder {
+        color: var(--color-login-placeholder);
+        opacity: 1;
+    }
+
+    .login-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .login-remember {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .login-remember input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--color-login-button);
+    }
+
+    .login-remember label {
+        color: var(--color-login-text-primary);
+        font-size: var(--text-sm);
+        font-weight: 400;
+        cursor: pointer;
+        margin: 0;
+        user-select: none;
+    }
+
+    .login-forgot {
+        color: var(--color-login-link);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+    }
+
+    .login-forgot:hover {
+        color: var(--color-login-link-hover);
+        text-decoration: underline;
+    }
+
+    .login-box .validation-message {
+        color: var(--color-login-error);
+        font-size: var(--text-xs);
+        margin-top: 6px;
+        display: block;
+    }
+
+    .btn-login {
+        width: 100%;
+        background-color: var(--color-login-button);
+        color: var(--color-white);
+        border: none;
+        border-radius: 8px;
+        padding: 14px 24px;
+        font-size: var(--text-base);
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--transition-normal), transform var(--transition-fast);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 0;
+        box-sizing: border-box;
+        line-height: 1.5;
+    }
+
+    .btn-login:hover:not(:disabled) {
+        background-color: var(--color-login-button-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-login:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .btn-login:disabled {
+        background-color: var(--color-gray-400);
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    .btn-login .spinner {
+        border: 2px solid var(--color-white);
+        border-top: 2px solid transparent;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        animation: login-spin 0.8s linear infinite;
+        flex-shrink: 0;
+    }
+
+    @@keyframes login-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .login-box .alert {
+        background-color: #FEF2F2;
+        color: var(--color-login-error);
+        border: 1px solid #FECACA;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        font-size: var(--text-sm);
+        line-height: 1.5;
+    }
+
+    .login-footer {
+        margin-top: 32px;
+        text-align: center;
+        padding-top: 24px;
+        border-top: 1px solid var(--color-border-light);
+    }
+
+    .login-footer p {
+        color: var(--color-login-text-secondary);
+        font-size: var(--text-sm);
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .login-footer a {
+        color: var(--color-login-link);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color var(--transition-fast);
+    }
+
+    .login-footer a:hover {
+        color: var(--color-login-link-hover);
+        text-decoration: underline;
+    }
+
+    @@media (max-width: 768px) {
+        .login-container { padding: 16px; }
+        .login-box { max-width: 100%; padding: 40px 32px; }
+    }
+
+    @@media (max-width: 576px) {
+        .login-container { padding: 12px; }
+        .login-box { padding: 32px 24px; border-radius: 10px; }
+        .login-header { margin-bottom: 28px; }
+        .login-box .form-group { margin-bottom: 20px; }
+        .login-options { flex-direction: column; align-items: flex-start; gap: 16px; }
+        .login-footer { margin-top: 28px; padding-top: 20px; }
+    }
+
+    @@media (max-width: 400px) {
+        .login-box { padding: 24px 20px; }
+    }
+
+    @@media (max-height: 600px) and (orientation: landscape) {
+        .login-container { padding: 12px; align-items: flex-start; padding-top: 20px; }
+        .login-box { padding: 24px; max-width: 450px; }
+        .login-header { margin-bottom: 20px; }
+        .login-box .form-group { margin-bottom: 16px; }
+    }
+</style>
+
 @code {
     private LoginFormModel loginModel = new LoginFormModel();
     private string? mensajeError;

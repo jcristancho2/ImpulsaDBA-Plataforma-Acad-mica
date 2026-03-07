@@ -15,8 +15,8 @@
     <div class="modal-overlay" 
          @onclick="CerrarModal"
          role="presentation">
-        <div class="modal-container" 
-             @onclick:stopPropagation="true"             @onkeydown="OnModalKeyDown"             role="dialog"
+        <div id="modal-video-enganche-container" class="modal-container" 
+             @onclick:stopPropagation="true" @onkeydown="OnModalKeyDown" role="dialog"
              aria-modal="true"
              aria-labelledby="modal-video-enganche-title">
             <div class="modal-header">
@@ -740,8 +740,17 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Mostrar)
+        {
+            try { await JSRuntime.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-video-enganche-container"); } catch { }
+        }
+    }
+
     private async Task CerrarModal()
     {
+        try { await JSRuntime.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();

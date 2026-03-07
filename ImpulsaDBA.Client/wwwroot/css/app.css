@@ -1,23 +1,18 @@
 /* ============================================
-   VARIABLES CSS - PALETA DE COLORES
+   VARIABLES CSS - PALETA OFICIAL Y TIPOGRAFÍA
    ImpulsaDBA - Plataforma Académica
    ============================================
-   
-   Este archivo contiene todas las variables de colores
-   reutilizables en toda la aplicación.
-   
-   USO:
-   - Usar var(--color-nombre) en lugar de valores hexadecimales
-   - Ejemplo: background-color: var(--color-primary);
-   - Permite cambiar colores globalmente desde un solo lugar
+   PALETA OFICIAL: usar solo var(--color-*) en componentes.
+   TIPOGRAFÍA: usar var(--text-xs|--text-sm|--text-base|--text-lg|--text-xl|--text-2xl)
+   para que el componente de accesibilidad (aumentar/disminuir texto) funcione.
    ============================================ */
 
 :root {
     /* ============================================
-      COLORES PRINCIPALES DE LA APLICACIÓN
-       ============================================ */
+      PALETA OFICIAL (uso preferente en toda la app)
+      ============================================ */
 
-    /* Colores del Login (basados en paleta CSV y diseño moderno) */
+    /* Login */
     --color-login-bg: #FAF8F6;
     /* Fondo aplicación (Pastel White #3) */
     --color-login-box: #FFFFFF;
@@ -286,13 +281,14 @@
     --color-pastel-cyan: #A4D8D8;
     --color-pastel-black: #1D1C1A;
 
-    /* Tipografía fluida (se adaptan al viewport) */
-    --text-xs: clamp(0.7rem, 1.5vw, 0.75rem);
-    --text-sm: clamp(0.8rem, 1.8vw, 0.9rem);
-    --text-base: clamp(0.875rem, 2vw, 1rem);
-    --text-lg: clamp(1rem, 2.2vw, 1.125rem);
-    --text-xl: clamp(1.1rem, 2.5vw, 1.25rem);
-    --text-2xl: clamp(1.2rem, 3vw, 1.5rem);
+    /* Escala tipográfica estándar (referenciar en componentes para accesibilidad) */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.75rem;
     /* Espaciado fluido */
     --space-cell: clamp(0.15rem, 1vw, 0.4rem);
     --space-section: clamp(0.5rem, 2vw, 1rem);
@@ -338,7 +334,7 @@ html {
     --color-border: #ffffff;
     --color-border-light: #ffffff;
     --color-border-dark: #ffffff;
-    --color-border-focus: #ffff00;
+    --color-border-focus: #E9BB33;
 
     /* Colores de input */
     --color-login-bg: #000000;
@@ -350,16 +346,16 @@ html {
     --color-login-input-border: #ffffff;
     --color-login-placeholder: #ffffff;
     --color-login-button: #ffffff;
-    --color-login-button-hover: #ffff00;
+    --color-login-button-hover: #E9BB33;
 
     /* Estados: Colores vibrantes */
-    --color-primary: #ffff00;
+    --color-primary: #E9BB33;
     --color-primary-dark: #cccc00;
-    --color-primary-light: #ffff00;
-    --color-primary-hover: #ffff00;
+    --color-primary-light: #E9BB33;
+    --color-primary-hover: #E9BB33;
     --color-secondary: #ffffff;
     --color-success: #00ff00;
-    --color-warning: #ffff00;
+    --color-warning: #E9BB33;
     --color-danger: #ff0000;
     --color-info: #00ffff;
 
@@ -371,6 +367,14 @@ html {
     /* Placeholder */
     --color-placeholder: #ffffff;
     --color-placeholder-light: #ffffff;
+
+    /* Sidebar del dashboard */
+    --dashboard-sidebar-bg: #E9BB33;
+
+    /* Grises usados en sidebar/iconos */
+    --color-gray-200: #ffffff;
+    --color-gray-600: #ffffff;
+    --color-gray-700: #ffffff;
 }
 
 /* ============================================
@@ -387,25 +391,26 @@ html {
 :root.high-contrast input[type="button"],
 :root.high-contrast input[type="submit"],
 :root.high-contrast input[type="reset"] {
-    background-color: #ffff00;
-    color: #000000;
+    background-color: #E9BB33;
+    color: #FFFFFF;
     border-color: #ffffff;
     border-width: 2px;
+    border-radius: var(--border-radius-xl);
 }
 
 :root.high-contrast button:hover,
 :root.high-contrast input[type="button"]:hover,
 :root.high-contrast input[type="submit"]:hover,
 :root.high-contrast input[type="reset"]:hover {
-    background-color: #ffff00;
-    color: #000000;
+    background-color: #E9BB33;
+    color: var(--color-text-secondary);
 }
 
 :root.high-contrast button:focus,
 :root.high-contrast input[type="button"]:focus,
 :root.high-contrast input[type="submit"]:focus,
 :root.high-contrast input[type="reset"]:focus {
-    outline-color: #ffff00;
+    outline-color: #E9BB33;
     outline-width: 3px;
 }
 
@@ -429,23 +434,23 @@ html {
 }
 
 :root.high-contrast a:visited {
-    color: #00ff00;
+    color: #E9BB33;
 }
 
 :root.high-contrast a:focus {
-    outline: 3px solid #ffff00;
+    outline: 3px solid #E9BB33;
     outline-offset: 2px;
 }
 
 :root.high-contrast .btn-primary {
-    background-color: #ffff00;
+    background-color: #E9BB33;
     color: #000000;
     border-color: #ffffff;
     border-width: 2px;
 }
 
 :root.high-contrast .btn-primary:hover {
-    background-color: #ffff00;
+    background-color: #E9BB33;
     color: #000000;
 }
 
@@ -471,7 +476,7 @@ html {
 }
 
 :root.high-contrast .btn-warning {
-    background-color: #ffff00;
+    background-color: #E9BB33;
     color: #000000;
     border-color: #ffffff;
     border-width: 2px;
@@ -491,7 +496,7 @@ html {
 
 :root.high-contrast .alert-primary {
     background-color: #000000;
-    color: #ffff00;
+    color: #E9BB33;
     border-color: #ffffff;
 }
 
@@ -509,7 +514,7 @@ html {
 
 :root.high-contrast .alert-warning {
     background-color: #000000;
-    color: #ffff00;
+    color: #E9BB33;
     border-color: #ffffff;
 }
 
@@ -566,11 +571,11 @@ html {
 }
 
 :root.high-contrast .nav-link:hover {
-    color: #ffff00;
+    color: #E9BB33;
 }
 
 :root.high-contrast .nav-link.active {
-    color: #ffff00;
+    color: #E9BB33;
     border-color: #ffff00;
 }
 
@@ -585,11 +590,11 @@ html {
     border-color: #ffffff;
 }
 
-:root.high-contrast .table-striped > tbody > tr:nth-of-type(odd) {
+:root.high-contrast .table-striped>tbody>tr:nth-of-type(odd) {
     background-color: #0a0a0a;
 }
 
-:root.high-contrast .table-striped > tbody > tr:nth-of-type(even) {
+:root.high-contrast .table-striped>tbody>tr:nth-of-type(even) {
     background-color: #1a1a1a;
 }
 
@@ -612,8 +617,156 @@ html {
 :root.high-contrast .form-control:focus {
     background-color: #000000;
     color: #ffffff;
-    border-color: #ffff00;
+    border-color: #E9BB33;
     box-shadow: 0 0 0 3px rgba(255, 255, 0, 0.5);
+}
+
+/* Dashboard: sidebar, header y contenido en alto contraste */
+:root.high-contrast .dashboard-container {
+    background-color: #000000;
+}
+
+/* Sidebar en alto contraste: fondo #E9BB33, letras e iconos negro */
+:root.high-contrast .dashboard-sidebar {
+    background-color: #E9BB33;
+    border-right: 2px solid #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .sidebar-header,
+:root.high-contrast .dashboard-sidebar .sidebar-title,
+:root.high-contrast .dashboard-sidebar .sidebar-subtitle,
+:root.high-contrast .dashboard-sidebar .sidebar-main-title,
+:root.high-contrast .dashboard-sidebar .logo-icon,
+:root.high-contrast .dashboard-sidebar .toggle-icon {
+    color: #000000;
+    border-color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .nav-item,
+:root.high-contrast .dashboard-sidebar .nav-icon,
+:root.high-contrast .dashboard-sidebar .nav-text,
+:root.high-contrast .dashboard-sidebar .nav-chevron,
+:root.high-contrast .dashboard-sidebar .sidebar-estudiante-trigger,
+:root.high-contrast .dashboard-sidebar .sidebar-estudiante-name,
+:root.high-contrast .dashboard-sidebar .sidebar-estudiante-curso {
+    color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .nav-item:hover,
+:root.high-contrast .dashboard-sidebar .sidebar-estudiante-trigger:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+    color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .nav-item.active {
+    background-color: #cccc00;
+    color: #E9BB33;
+}
+
+:root.high-contrast .dashboard-sidebar .nav-item-tooltip {
+    background-color: #E9BB33;
+    color: #000000;
+    border: 2px solid #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .sidebar-header {
+    border-bottom-color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .sidebar-footer {
+    border-top-color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .sidebar-toggle {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: #000000;
+}
+
+:root.high-contrast .dashboard-sidebar .sidebar-estudiante-avatar-iniciales {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: #000000;
+}
+
+:root.high-contrast .dashboard-main {
+    background-color: #000000;
+}
+
+:root.high-contrast .dashboard-header {
+    background-color: #000000;
+    padding: 0.75rem;
+    border-bottom: 2px solid #ffffff;
+}
+
+:root.high-contrast .breadcrumb,
+:root.high-contrast .breadcrumb-link,
+:root.high-contrast .breadcrumb-current,
+:root.high-contrast .breadcrumb-sep {
+    color: #ffffff;
+}
+
+:root.high-contrast .breadcrumb-link:hover {
+    color: #E9BB33;
+}
+
+:root.high-contrast .header-icon-btn {
+    color: #000000;
+}
+
+:root.high-contrast .header-icon-btn:hover {
+    color: #000000;
+}
+
+:root.high-contrast .dashboard-content {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+/* Barra de accesibilidad en alto contraste */
+:root.high-contrast .accessibility-bar-container {
+    background-color: #E9BB33;
+
+}
+
+:root.high-contrast .accessibility-bar {
+    background-color: transparent;
+}
+
+:root.high-contrast .accessibility-bar .icon {
+    background-color: #E9BB33;
+    color: #000000;
+    border: 2px solid #cccc00;
+}
+
+:root.high-contrast .accessibility-bar .icon:hover {
+    background-color: #E9BB33;
+    color: #000000;
+}
+
+:root.high-contrast .accessibility-bar .icon:focus-visible {
+    outline: 3px solid #E9BB33;
+    outline-offset: 2px;
+}
+
+/* Focus visible en alto contraste (amarillo consistente) */
+:root.high-contrast *:focus-visible {
+    outline: 3px solid #E9BB33;
+    outline-offset: 2px;
+}
+
+:root.high-contrast .action-card {
+    border: 2px solid #ffffff;
+}
+
+:root.high-contrast .action-card:hover {
+    border: 2px solid #E9BB33;
+}
+
+:root.high-contrast .action-card:focus-visible {
+    border: 2px solid #E9BB33;
+}
+
+:root.high-contrast .action-card:active {
+    border: 2px solid #E9BB33;
 }
 
 :root.large-text {
@@ -625,85 +778,185 @@ html {
     --text-3xl: 2rem;
 }
 
+/* Escala de tamaño de texto (accesibilidad): aplicada en html vía impulsaAcc.setFontSize.
+   font-size en :root hace que todos los rem de la app escalen. */
 :root.font-size-0875 {
-    /* 87.5% - Muy pequeño */
+    font-size: 87.5%;
+    /* 87.5% - Muy pequeño (accesibilidad) */
+    --text-xs: 0.6875rem;
+    --text-sm: 0.765625rem;
     --text-base: 0.875rem;
     --text-lg: 1rem;
     --text-xl: 1.125rem;
     --text-2xl: 1.25rem;
+    --text-3xl: 1.375rem;
 }
 
 :root.font-size-1 {
+    font-size: 100%;
     /* 100% - Normal (default) */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
     --text-base: 1rem;
     --text-lg: 1.125rem;
     --text-xl: 1.25rem;
     --text-2xl: 1.35rem;
+    --text-3xl: 1.75rem;
 }
 
 :root.font-size-1125 {
-    /* 112.5% - Grande */
+    font-size: 112.5%;
+    /* 112.5% - Grande (accesibilidad) */
+    --text-xs: 0.84375rem;
+    --text-sm: 0.984375rem;
     --text-base: 1.125rem;
     --text-lg: 1.25rem;
     --text-xl: 1.35rem;
     --text-2xl: 1.5rem;
+    --text-3xl: 1.96875rem;
 }
 
 :root.font-size-1325 {
-    /* 132.5% - Más grande */
+    font-size: 132.5%;
+    /* 132.5% - Más grande (accesibilidad) */
+    --text-xs: 0.99375rem;
+    --text-sm: 1.159375rem;
     --text-base: 1.325rem;
     --text-lg: 1.45rem;
     --text-xl: 1.55rem;
     --text-2xl: 1.7rem;
+    --text-3xl: 2.31875rem;
 }
 
 :root.font-size-1525 {
-    /* 152.5% - Muy grande */
+    font-size: 152.5%;
+    /* 152.5% - Muy grande (accesibilidad) */
+    --text-xs: 1.14375rem;
+    --text-sm: 1.334375rem;
     --text-base: 1.525rem;
     --text-lg: 1.65rem;
     --text-xl: 1.75rem;
     --text-2xl: 2rem;
+    --text-3xl: 2.66875rem;
 }
 
 body {
     max-width: 100vw;
     overflow-x: hidden;
+    font-size: var(--text-base);
 }
 
-/* Contenedores principales se adaptan al ancho */
+/* Contenedores principales: usan escala tipográfica para accesibilidad (aumentar/disminuir texto) */
+.dashboard-content,
+.dashboard-main,
+.calendario-page,
+.calendario-container,
+.dashboard-page,
+.foro-list-page,
+.duplicar-page,
+.inicio-page,
+.foro-page,
+.calificar-page,
+.perfil-page {
+    max-width: 100%;
+    box-sizing: border-box;
+    font-size: var(--text-base);
+}
+
 .dashboard-content,
 .dashboard-main,
 .calendario-page,
 .calendario-container {
-    max-width: 100%;
-    box-sizing: border-box;
     height: 100vh;
 }
 
-/* Títulos y textos que escalan (solo dentro de dashboard/main para no afectar login) */
+/* Títulos y textos que escalan con el componente de accesibilidad */
 .dashboard-content h1,
-.dashboard-main h1 {
+.dashboard-main h1,
+.dashboard-page h1,
+.foro-list-page h1,
+.duplicar-page h1,
+.inicio-page h1,
+.foro-page h1,
+.calificar-page h1,
+.perfil-page h1 {
     font-size: var(--text-2xl);
 }
 
 .dashboard-content h2,
-.dashboard-main h2 {
+.dashboard-main h2,
+.dashboard-page h2,
+.foro-page h2,
+.calificar-page h2 {
     font-size: var(--text-xl);
 }
 
 .dashboard-content h3,
-.dashboard-main h3 {
+.dashboard-main h3,
+.dashboard-page h3,
+.foro-list-page h3,
+.foro-page h3 {
     font-size: var(--text-lg);
 }
 
 .dashboard-content p,
-.dashboard-content .text-body {
+.dashboard-content .text-body,
+.dashboard-page p,
+.foro-list-page p,
+.duplicar-page p,
+.inicio-page p,
+.foro-page p,
+.calificar-page p {
     font-size: var(--text-base);
 }
 
 .dashboard-content small,
-.dashboard-content .text-small {
+.dashboard-content .text-small,
+.dashboard-page small,
+.foro-list-page small,
+.duplicar-page small {
     font-size: var(--text-sm);
+}
+
+/* Modales: texto escalado */
+.modal-body,
+.modal-header,
+.modal-container {
+    font-size: var(--text-base);
+}
+
+.modal-header h2,
+.modal-header h3 {
+    font-size: var(--text-xl);
+}
+
+/* Clases de utilidad para tipografía (usar en componentes) */
+.text-size-xs {
+    font-size: var(--text-xs) !important;
+}
+
+.text-size-sm {
+    font-size: var(--text-sm) !important;
+}
+
+.text-size-base {
+    font-size: var(--text-base) !important;
+}
+
+.text-size-lg {
+    font-size: var(--text-lg) !important;
+}
+
+.text-size-xl {
+    font-size: var(--text-xl) !important;
+}
+
+.text-size-2xl {
+    font-size: var(--text-2xl) !important;
+}
+
+.text-size-3xl {
+    font-size: var(--text-3xl) !important;
 }
 
 /* ============================================
@@ -917,11 +1170,25 @@ a,
     color: #9ca3af;
 }
 
-.tile-primary { background: #22c55e; }
-.tile-accent { background: #06b6d4; }
-.tile-secondary { background: #6366f1; }
-.tile-muted { background: #4b5563; }
-.tile-card { background: #0f172a; }
+.tile-primary {
+    background: #22c55e;
+}
+
+.tile-accent {
+    background: #06b6d4;
+}
+
+.tile-secondary {
+    background: #6366f1;
+}
+
+.tile-muted {
+    background: #4b5563;
+}
+
+.tile-card {
+    background: #0f172a;
+}
 
 code {
     color: #c02d76;
@@ -939,374 +1206,6 @@ code {
 }
 
 /* ============================================
-   ESTILOS PARA PÁGINA DE LOGIN
-   Diseño moderno y minimalista
-   ============================================ */
-
-/* Contenedor principal del login - fondo claro */
-.login-container {
-    min-height: 100vh;
-    background-color: var(--color-login-bg);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-/* Cajón del login - tarjeta blanca centrada */
-.login-box {
-    background-color: var(--color-login-box);
-    width: 100%;
-    max-width: 480px;
-    padding: 48px 40px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-    box-sizing: border-box;
-}
-
-/* Encabezado del login */
-.login-header {
-    margin-bottom: 32px;
-    text-align: center;
-}
-
-.login-header h1 {
-    color: var(--color-login-text-primary);
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 8px 0;
-    line-height: 1.3;
-}
-
-.login-header p {
-    color: var(--color-login-text-secondary);
-    font-size: 0.9375rem;
-    font-weight: 400;
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* Grupos de formulario */
-.login-box .form-group {
-    margin-bottom: 24px;
-}
-
-.login-box .form-group label {
-    color: var(--color-login-text-primary);
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    font-size: 0.875rem;
-    line-height: 1.5;
-}
-
-/* Inputs del formulario */
-.login-box .form-control {
-    background-color: var(--color-login-input-bg);
-    color: var(--color-login-input-text);
-    border: 1px solid var(--color-login-input-border);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 0.9375rem;
-    width: 100%;
-    transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
-    box-sizing: border-box;
-    line-height: 1.5;
-}
-
-.login-box .form-control:focus {
-    background-color: var(--color-login-input-bg);
-    color: var(--color-login-input-text);
-    border-color: var(--color-login-button);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(47, 82, 126, 0.1);
-}
-
-.login-box .form-control::placeholder {
-    color: var(--color-login-placeholder);
-    opacity: 1;
-}
-
-/* Contenedor de opciones (Recordarme y Olvidó contraseña) */
-.login-options {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-/* Checkbox Recordarme */
-.login-remember {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.login-remember input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: var(--color-login-button);
-}
-
-.login-remember label {
-    color: var(--color-login-text-primary);
-    font-size: 0.875rem;
-    font-weight: 400;
-    cursor: pointer;
-    margin: 0;
-    user-select: none;
-}
-
-/* Link Olvidó contraseña */
-.login-forgot {
-    color: var(--color-login-link);
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-.login-forgot:hover {
-    color: var(--color-login-link-hover);
-    text-decoration: underline;
-}
-
-/* Mensajes de validación */
-.login-box .validation-message {
-    color: var(--color-login-error);
-    font-size: 0.8125rem;
-    margin-top: 6px;
-    display: block;
-}
-
-/* Botón de login */
-.btn-login {
-    width: 100%;
-    background-color: var(--color-login-button);
-    color: var(--color-white);
-    border: none;
-    border-radius: 8px;
-    padding: 14px 24px;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color var(--transition-normal), transform var(--transition-fast);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 0;
-    box-sizing: border-box;
-    line-height: 1.5;
-}
-
-.btn-login:hover:not(:disabled) {
-    background-color: var(--color-login-button-hover);
-    transform: translateY(-1px);
-}
-
-.btn-login:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.btn-login:disabled {
-    background-color: var(--color-gray-400);
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-/* Spinner de carga */
-.btn-login .spinner {
-    border: 2px solid var(--color-white);
-    border-top: 2px solid transparent;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    animation: spin 0.8s linear infinite;
-    flex-shrink: 0;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* Alertas de error */
-.login-box .alert {
-    background-color: #FEF2F2;
-    color: var(--color-login-error);
-    border: 1px solid #FECACA;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 24px;
-    font-size: 0.875rem;
-    line-height: 1.5;
-}
-
-/* Footer del login */
-.login-footer {
-    margin-top: 32px;
-    text-align: center;
-    padding-top: 24px;
-    border-top: 1px solid var(--color-border-light);
-}
-
-.login-footer p {
-    color: var(--color-login-text-secondary);
-    font-size: 0.875rem;
-    margin: 0;
-    line-height: 1.5;
-}
-
-.login-footer a {
-    color: var(--color-login-link);
-    font-weight: 500;
-    text-decoration: none;
-    transition: color var(--transition-fast);
-}
-
-.login-footer a:hover {
-    color: var(--color-login-link-hover);
-    text-decoration: underline;
-}
-
-/* ============================================
-   MEDIA QUERIES - LOGIN RESPONSIVO
-   ============================================ */
-
-/* Tablets (768px y menores) */
-@media (max-width: 768px) {
-    .login-container {
-        padding: 16px;
-    }
-
-    .login-box {
-        max-width: 100%;
-        padding: 40px 32px;
-    }
-
-    .login-header h1 {
-        font-size: 1.75rem;
-    }
-}
-
-/* Móviles grandes (576px y menores) */
-@media (max-width: 576px) {
-    .login-container {
-        padding: 12px;
-    }
-
-    .login-box {
-        padding: 32px 24px;
-        border-radius: 10px;
-    }
-
-    .login-header {
-        margin-bottom: 28px;
-    }
-
-    .login-header h1 {
-        font-size: 1.5rem;
-        margin-bottom: 6px;
-    }
-
-    .login-header p {
-        font-size: 0.875rem;
-    }
-
-    .login-box .form-group {
-        margin-bottom: 20px;
-    }
-
-    .login-box .form-group label {
-        font-size: 0.8125rem;
-        margin-bottom: 6px;
-    }
-
-    .login-box .form-control {
-        padding: 10px 14px;
-        font-size: 0.875rem;
-    }
-
-    .login-options {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
-    }
-
-    .btn-login {
-        font-size: 0.875rem;
-        padding: 12px 20px;
-    }
-
-    .login-footer {
-        margin-top: 28px;
-        padding-top: 20px;
-    }
-}
-
-/* Móviles pequeños (400px y menores) */
-@media (max-width: 400px) {
-    .login-box {
-        padding: 24px 20px;
-    }
-
-    .login-header h1 {
-        font-size: 1.375rem;
-    }
-
-    .login-box .form-control {
-        padding: 10px 12px;
-        font-size: 0.875rem;
-    }
-
-    .btn-login {
-        font-size: 0.875rem;
-        padding: 11px 18px;
-    }
-}
-
-/* Orientación landscape en móviles */
-@media (max-height: 600px) and (orientation: landscape) {
-    .login-container {
-        padding: 12px;
-        align-items: flex-start;
-        padding-top: 20px;
-    }
-
-    .login-box {
-        padding: 24px;
-        max-width: 450px;
-    }
-
-    .login-header {
-        margin-bottom: 20px;
-    }
-
-    .login-header h1 {
-        font-size: 1.375rem;
-        margin-bottom: 4px;
-    }
-
-    .login-header p {
-        font-size: 0.8125rem;
-    }
-
-    .login-box .form-group {
-        margin-bottom: 16px;
-    }
-}
-
-/* ============================================
    DASHBOARD STYLES
    ImpulsaDBA - Plataforma Académica
    ============================================ */
@@ -1316,7 +1215,10 @@ code {
     grid-template-columns: 250px 1fr;
     grid-template-rows: auto 1fr;
     min-height: 100vh;
+    min-height: 100dvh;
     background-color: var(--color-bg-secondary);
+    overflow-x: hidden;
+    transition: grid-template-columns var(--transition-normal);
 }
 
 .dashboard-container.sidebar-collapsed {
@@ -1334,6 +1236,7 @@ code {
     height: 100vh;
     width: 100%;
     min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     background-color: var(--dashboard-sidebar-bg, #03183f);
@@ -1341,13 +1244,16 @@ code {
 }
 
 .dashboard-sidebar.collapsed {
-    /* El ancho lo define el grid (70px) cuando .dashboard-container.sidebar-collapsed */
-    min-width: 0;
+    min-width: 70px;
+    max-width: 70px;
+    width: 70px;
 }
 
+/* Colapsado: al hacer hover no se expande, solo se ven los tooltips */
 .dashboard-sidebar.collapsed:hover {
-    /* Al hacer hover, el grid se expande con :has() en el container */
-    min-width: 0;
+    min-width: 70px;
+    max-width: 70px;
+    width: 70px;
 }
 
 .sidebar-header {
@@ -1404,8 +1310,10 @@ code {
 .sidebar-logo {
     width: 46px;
     min-width: 40px;
-    height: 46px;            /* ← altura fija, no "stretch" */
-    max-height: 46px;        /* ← tope explícito */
+    height: 46px;
+    /* ← altura fija, no "stretch" */
+    max-height: 46px;
+    /* ← tope explícito */
     background-color: transparent;
     display: flex;
     align-items: center;
@@ -1422,8 +1330,10 @@ code {
 .sidebar-logo-img {
     width: 100%;
     height: 100%;
-    max-width: 46px;         /* ← no excede el contenedor */
-    max-height: 46px;        /* ← tope que evita el desbordamiento */
+    max-width: 46px;
+    /* ← no excede el contenedor */
+    max-height: 46px;
+    /* ← tope que evita el desbordamiento */
     object-fit: contain;
     display: block;
 }
@@ -1484,7 +1394,8 @@ code {
     pointer-events: none;
 }
 
-.dashboard-sidebar:hover .sidebar-title {
+/* Solo expandir título cuando el sidebar NO está colapsado (evita que crezca el contenedor al pasar el mouse) */
+.dashboard-sidebar:not(.collapsed):hover .sidebar-title {
     position: static;
     opacity: 1;
     width: auto;
@@ -1494,7 +1405,8 @@ code {
 
 .dashboard-sidebar.collapsed .sidebar-header {
     justify-content: center;
-    pointer-events: none;   /* evita interacción en el header */
+    pointer-events: none;
+    /* evita interacción en el header */
 }
 
 /* Pero sí permitir clic en el logo para expandir */
@@ -1505,7 +1417,7 @@ code {
 /* Panel perfil docente (igual que app estudiante: colapsable, foto, nombre completo) */
 .sidebar-estudiante-wrap {
     width: 100%;
-    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    padding-left: 0.75rem;
     flex-shrink: 0;
 }
 
@@ -1517,11 +1429,11 @@ code {
     border: none;
     background: var(--dashboard-sidebar-bg);
     border-radius: var(--border-radius-md);
-    color: var(--color-gray-200);
+    color: var(--color-text-primary);
     cursor: pointer;
     font-size: 0.95rem;
     text-align: left;
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem;
     transition: background-color var(--transition-fast);
 }
 
@@ -1634,12 +1546,13 @@ code {
     opacity: 0;
     width: 0;
     overflow: hidden;
+
 }
 
 .dashboard-sidebar.collapsed .sidebar-estudiante-trigger {
     position: relative;
     justify-content: center;
-    padding-left: 0.75rem;
+    padding-left: 2rem;
 }
 
 .dashboard-sidebar.collapsed .sidebar-estudiante-trigger:hover .nav-item-tooltip,
@@ -1657,9 +1570,17 @@ code {
     min-height: 0;
     padding: 0.5rem 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -1700,6 +1621,7 @@ code {
     white-space: nowrap;
     overflow: hidden;
     transition: opacity var(--transition-normal);
+    color: var(--color-text-white);
 }
 
 .dashboard-sidebar.collapsed .nav-text {
@@ -1707,7 +1629,8 @@ code {
     width: 0;
 }
 
-.dashboard-sidebar:hover .nav-text {
+/* Solo mostrar texto del nav cuando el sidebar NO está colapsado */
+.dashboard-sidebar:not(.collapsed):hover .nav-text {
     opacity: 1;
     width: auto;
 }
@@ -1732,7 +1655,7 @@ code {
     width: 0;
 }
 
-.dashboard-sidebar:hover .nav-back .nav-text {
+.dashboard-sidebar:not(.collapsed):hover .nav-back .nav-text {
     opacity: 0.8;
     width: auto;
 }
@@ -1754,7 +1677,7 @@ code {
     width: 0;
 }
 
-.dashboard-sidebar:hover .nav-logout .nav-text {
+.dashboard-sidebar:not(.collapsed):hover .nav-logout .nav-text {
     opacity: 0.8;
     width: auto;
 }
@@ -1801,6 +1724,8 @@ code {
     flex-direction: column;
     min-height: 100vh;
     min-width: 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 /* ============================================
@@ -1828,28 +1753,28 @@ code {
     flex-wrap: wrap;
     gap: 0.25rem;
     font-size: 0.9rem;
-    color: var(--color-gray-600);
+    color: var(--color-text-secondary);
 }
 
 .breadcrumb-sep {
-    color: var(--color-gray-600);
+    color: var(--color-text-secondary);
     opacity: 0.7;
     user-select: none;
 }
 
 .breadcrumb-link {
-    color: var(--color-gray-600);
+    color: var(--color-text-secondary);
     text-decoration: none;
     transition: color var(--transition-fast), text-decoration var(--transition-fast);
 }
 
 .breadcrumb-link:hover {
-    color: var(--color-gray-600);
+    color: var(--color-text-secondary);
     text-decoration: underline;
 }
 
 .breadcrumb-current {
-    color: var(--color-gray-600);
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
@@ -1859,15 +1784,16 @@ code {
     justify-content: flex-end;
     align-items: center;
     gap: 0.5rem;
+    margin-right: 1rem;
 }
 
 .header-right .header-icon-btn {
-    color: var(--color-gray-700);
+    color: var(--color-text-primary);
     font-size: 1.2rem;
 }
 
 .header-right .header-icon-btn:hover {
-    color: var(--color-primary, #052767);
+    color: var(--color-text-secondary);
 }
 
 .header-icon-btn {
@@ -1881,13 +1807,14 @@ code {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-gray-700);
+    color: var(--color-text-secondary);
     font-size: 1.2rem;
+
 }
 
 .header-icon-btn:hover {
     background-color: var(--color-bg-secondary);
-    color: var(--color-primary, #052767);
+    color: var(--color-text-primary);
 }
 
 .header-icon-btn .tooltip-text {
@@ -1899,12 +1826,12 @@ code {
     left: 50%;
     transform: translateX(-50%);
     white-space: nowrap;
-    background: #1c2635;
-    color: #fff;
+    background: var(--color-bg-dark);
+    color: var(--color-text-white);
     font-size: 0.75rem;
     padding: 0.3rem 0.65rem;
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    box-shadow: 0 4px 12px var(--color-shadow);
     transition: opacity .18s ease, visibility .18s ease;
     z-index: 100;
 }
@@ -1943,8 +1870,9 @@ code {
 
 .search-input:focus {
     outline: none;
-    border-color: var(--color-primary);
+    border-color: var(--color-border-focus);
 }
+/* Focus visible con teclado lo define accessibility.css (.search-input:focus-visible) */
 
 .header-center {
     flex: 1;
@@ -2026,7 +1954,7 @@ code {
     position: absolute;
     top: 0;
     right: 0;
-    background-color: var(--color-danger);
+    background-color: var(--color-bg-danger);
     color: var(--color-text-white);
     border-radius: var(--border-radius-round);
     width: 18px;
@@ -2056,7 +1984,7 @@ code {
 .avatar-placeholder {
     width: 100%;
     height: 100%;
-    background-color: var(--color-primary);
+    background-color: var(--color-bg-primary);
     color: var(--color-text-white);
     display: flex;
     align-items: center;
@@ -2073,46 +2001,59 @@ code {
     flex: 1;
     min-height: 0;
     min-width: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     padding: 0.5rem 1rem 0.5rem 0.5rem;
     height: 100vh;
+    height: 100dvh;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Que el contenido (ej. calendario) use todo el ancho cuando el sidebar está contraído */
-.dashboard-content>* {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    height: 100vh;
+/* Que el contenido (ej. calendario) use todo el ancho cuando el sidebar está contraído
+   Nota: se excluye la barra de accesibilidad para que mantenga su propio tamaño fijo */
+/* ============================================
+   BARRA DE ACCESIBILIDAD FLOTANTE
+   No afecta el layout del dashboard
+   ============================================ */
+
+.accessibility-bar-container {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 4000;
+    width: 3.5rem;
+    background: transparent;
 }
 
 /* ============================================
-   RESPONSIVE - DASHBOARD (mismo sistema en todo el proyecto)
-   En móvil/tablet: sidebar solo iconos, tooltip al hover, clic navega
+   RESPONSIVE - DASHBOARD
+   Pantallas 13.6"+, tablet y móvil sin perder funcionalidad
    ============================================ */
 
-@media (max-width: 768px) {
+/* Tablet y pantallas pequeñas: sidebar fijo 70px, contenido adaptable */
+@media (max-width: 1024px) {
     .dashboard-container {
-        flex-direction: row;
+        grid-template-columns: 70px 1fr;
+    }
+
+    .dashboard-container.sidebar-collapsed {
+        grid-template-columns: 70px 1fr;
     }
 
     .dashboard-sidebar {
         width: 70px;
         min-width: 70px;
-        position: fixed;
-        height: 100vh;
     }
 
-    .dashboard-sidebar.collapsed {
-        width: 70px;
+    .dashboard-sidebar .sidebar-title {
+        justify-content: center;
     }
 
-    .dashboard-sidebar:hover {
-        width: 70px;
-    }
-
-    .dashboard-sidebar .sidebar-title,
     .dashboard-sidebar.collapsed .sidebar-header {
         justify-content: center;
     }
@@ -2123,6 +2064,30 @@ code {
         width: 0;
         overflow: hidden;
         visibility: hidden;
+    }
+}
+
+/* Móvil y tablet: sidebar fijo, contenido con margen */
+@media (max-width: 768px) {
+    .dashboard-container {
+        grid-template-columns: 70px 1fr;
+    }
+
+    .dashboard-sidebar {
+        width: 70px;
+        min-width: 70px;
+        position: fixed;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 1000;
+    }
+
+    .dashboard-sidebar.collapsed {
+        width: 70px;
+    }
+
+    .dashboard-sidebar:hover {
+        width: 70px;
     }
 
     .dashboard-sidebar .sidebar-toggle {
@@ -2136,12 +2101,10 @@ code {
 
     .dashboard-main {
         margin-left: 70px;
+        min-width: 0;
     }
 
-    .dashboard-sidebar:hover~.dashboard-main {
-        margin-left: 70px;
-    }
-
+    .dashboard-sidebar:hover~.dashboard-main,
     .dashboard-sidebar.collapsed~.dashboard-main {
         margin-left: 70px;
     }
@@ -2150,7 +2113,7 @@ code {
         flex-direction: row;
         flex-wrap: wrap;
         gap: 0.75rem;
-        padding: 1rem;
+        padding: 0.75rem 0.5rem;
     }
 
     .header-left {
@@ -2162,25 +2125,55 @@ code {
         flex: 1 1 auto;
     }
 
-    .user-info {
-        align-items: center;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-    }
-
     .dashboard-content {
         padding: 0.5rem;
+        max-width: 100%;
+    }
+
+    /* Área de accesibilidad no tape contenido en móvil */
+    .accessibility-bar-container {
+        right: 0;
+        top: auto;
+        bottom: 1rem;
+        transform: none;
     }
 }
 
+/* Móvil pequeño: más padding táctil, menos espaciado */
 @media (max-width: 576px) {
     .dashboard-content {
-        padding: 0.5rem;
+        padding: 0.4rem;
     }
 
     .dashboard-header {
-        padding: 0.75rem;
+        padding: 0.5rem 0.4rem;
+    }
+
+    .nav-item {
+        min-height: 44px;
+        padding: 0.75rem 1rem;
+    }
+
+    .sidebar-toggle {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Móvil muy pequeño */
+@media (max-width: 400px) {
+    .dashboard-main {
+        margin-left: 60px;
+    }
+
+    .dashboard-sidebar {
+        width: 60px;
+        min-width: 60px;
+    }
+
+    .dashboard-sidebar:hover~.dashboard-main,
+    .dashboard-sidebar.collapsed~.dashboard-main {
+        margin-left: 60px;
     }
 }
 
@@ -2410,8 +2403,15 @@ input[type=number] {
 }
 
 @keyframes perfil-fadeSlideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .perfil-hero {
@@ -2642,13 +2642,28 @@ input[type=number] {
     animation: perfil-ring-spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
-.loading-ring div:nth-child(1) { animation-delay: -0.225s; }
-.loading-ring div:nth-child(2) { animation-delay: -0.15s;  border-top-color: var(--color-info); }
-.loading-ring div:nth-child(3) { animation-delay: -0.075s; border-top-color: var(--color-primary-light); }
+.loading-ring div:nth-child(1) {
+    animation-delay: -0.225s;
+}
+
+.loading-ring div:nth-child(2) {
+    animation-delay: -0.15s;
+    border-top-color: var(--color-info);
+}
+
+.loading-ring div:nth-child(3) {
+    animation-delay: -0.075s;
+    border-top-color: var(--color-primary-light);
+}
 
 @keyframes perfil-ring-spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 580px) {

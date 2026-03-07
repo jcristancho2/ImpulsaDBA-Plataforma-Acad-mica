@@ -1,15 +1,17 @@
 @using ImpulsaDBA.Shared.Requests
 @using ImpulsaDBA.Client.Services
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.JSInterop
 @inject AuthService AuthService
 @inject CurrieTechnologies.Razor.SweetAlert2.SweetAlertService Swal
+@inject IJSRuntime JS
 
 @if (Mostrar)
 {
     <div class="modal-overlay" 
          @onclick="CerrarModal"
          role="presentation">
-        <div class="modal-container" 
+        <div id="modal-olvide-contrasena-container" class="modal-container" 
              @onclick:stopPropagation="true"
              @onkeydown="OnModalKeyDown"
              role="dialog"
@@ -237,8 +239,17 @@
         cambioModel = new CambiarContrasenaRequest();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Mostrar)
+        {
+            try { await JS.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-olvide-contrasena-container"); } catch { }
+        }
+    }
+
     private async Task CerrarModal()
     {
+        try { await JS.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         informacionValidada = false;
         mensajeError = null;
         validacionModel = new ValidarInformacionRecuperacionRequest();

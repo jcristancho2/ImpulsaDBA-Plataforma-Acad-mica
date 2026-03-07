@@ -1,7 +1,9 @@
 @using ImpulsaDBA.Shared.DTOs
 @using ImpulsaDBA.Shared.Requests
 @using ImpulsaDBA.Client.Services
+@using Microsoft.JSInterop
 @inject CalendarioService CalendarioService
+@inject IJSRuntime JS
 
 @if (Mostrar)
 {
@@ -9,7 +11,7 @@
          @onclick="CerrarModal" 
          style="z-index: 9999;"
          role="presentation">
-        <div class="modal-container" 
+        <div id="modal-actividad-container" class="modal-container" 
              @onclick:stopPropagation="true"
              @onkeydown="OnModalKeyDown"
              role="dialog"
@@ -230,6 +232,18 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Mostrar)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-actividad-container");
+            }
+            catch { /* JS no disponible o modal ya cerrado */ }
+        }
+    }
+
     private async Task CargarTiposActividades()
     {
         tiposActividades = await CalendarioService.ObtenerTiposActividades();
@@ -260,6 +274,7 @@
 
     private async Task CerrarModal()
     {
+        try { await JS.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         MensajeError = string.Empty;
         if (OnCerrar.HasDelegate)
         {

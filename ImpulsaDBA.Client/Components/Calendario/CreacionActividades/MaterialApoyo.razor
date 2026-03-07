@@ -2,19 +2,21 @@
 @using ImpulsaDBA.Shared.Requests
 @using ImpulsaDBA.Client.Services
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @inject CalendarioService CalendarioService
 @inject AsignaturaService AsignaturaService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 @if (Mostrar)
 {
     <div class="modal-overlay" 
          @onclick="CerrarModal"
          role="presentation">
-        <div class="modal-container" 
-             @onclick:stopPropagation="true"             @onkeydown="OnModalKeyDown"             role="dialog"
+        <div id="modal-material-apoyo-container" class="modal-container" 
+             @onclick:stopPropagation="true" @onkeydown="OnModalKeyDown" role="dialog"
              aria-modal="true"
              aria-labelledby="modal-material-apoyo-title">
             <div class="modal-header">
@@ -603,8 +605,17 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Mostrar)
+        {
+            try { await JS.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-material-apoyo-container"); } catch { }
+        }
+    }
+
     private async Task CerrarModal()
     {
+        try { await JS.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         if (OnCerrar.HasDelegate)
         {
             await OnCerrar.InvokeAsync();

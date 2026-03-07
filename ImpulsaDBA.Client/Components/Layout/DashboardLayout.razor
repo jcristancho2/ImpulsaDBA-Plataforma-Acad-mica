@@ -5,10 +5,12 @@
 @using Blazored.LocalStorage
 @using ImpulsaDBA.Client.Services
 @using ImpulsaDBA.Client.Auth
+@using Microsoft.JSInterop
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ILocalStorageService LocalStorage
 @inject AsignaturaService AsignaturaService
+@inject IJSRuntime JSRuntime
 
 <div class="dashboard-container @(isCollapsed ? "sidebar-collapsed" : "")">
     <!-- Sidebar -->
@@ -86,11 +88,11 @@
                 <span class="nav-text">Duplicar actividades</span>
                 <span class="nav-item-tooltip">Duplicar actividades</span>
             </button>
-            <a href="/dashboard/foro" class="nav-item @(EsRutaActivaForo() ? "active" : "")" title="Foro" aria-label="Ir al foro">
+            <button class="nav-item @(EsRutaActivaForo() ? "active" : "")" @onclick="@(() => MostrarVista("foro"))" title="Foro" aria-label="Ir al foro">
                 <i class="bi bi-chat-dots nav-icon"></i>
                 <span class="nav-text">Foro</span>
                 <span class="nav-item-tooltip">Foro</span>
-            </a>
+            </button>
         </nav>
         
         <div class="sidebar-footer">
@@ -147,16 +149,16 @@
         <!-- Content -->
         <main id="contenido-principal" class="dashboard-content" tabindex="-1">
             <CascadingValue Value="vistaActual" Name="VistaActual">
-                <CascadingValue Value="this" Name="DashboardLayout">
-                    @Body
+                <CascadingValue Value="isCollapsed" Name="SidebarCollapsed">
+                    <CascadingValue Value="this" Name="DashboardLayout">
+                        @Body
+                    </CascadingValue>
                 </CascadingValue>
             </CascadingValue>
-
-            <!-- Accessibility Bar (Pantallas Dashboard) -->
-            <div class="accessibility-bar-container">
-                <AccessibilityHeader />
-            </div>
         </main>
+        <div class="accessibility-bar-container">
+                <AccessibilityHeader />
+        </div>
     </div>
 </div>
 
@@ -255,37 +257,40 @@
     private async Task ToggleSidebar()
     {
         isCollapsed = !isCollapsed;
-        // Guardar estado en LocalStorage
         try
         {
             await LocalStorage.SetItemAsync(SIDEBAR_STATE_KEY, isCollapsed ? "true" : "false");
         }
-        catch
-        {
-            // Si hay error al guardar, continuar sin guardar
-        }
+        catch { }
+
         StateHasChanged();
+
+        // Forzar reajuste del contenido: grids, calendario y vistas recalculan al cambiar el ancho
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "window.dispatchEvent(new Event('resize'));");
+        }
+        catch { }
     }
 
 
     /// <summary>
-    /// Cambia la vista actual del Dashboard
+    /// Cambia la vista actual del Dashboard y navega a la ruta correspondiente.
+    /// Rutas absolutas para que funcionen desde cualquier página.
     /// </summary>
     private void MostrarVista(string vista)
     {
         vistaActual = vista;
-        
-        // Navegar a la ruta correspondiente
         var ruta = vista switch
         {
-            "inicio" => "inicio",
-            "asignaturas" => "asignaturas",
-            "calendario" => "calendario",
-                "calificar" => "calificar-actividades",
-            "duplicar" => "duplicar actividades",
-            _ => "inicio"
+            "inicio" => "/dashboard/inicio",
+            "asignaturas" => "/dashboard/asignaturas",
+            "calendario" => "/dashboard/calendario",
+            "calificar" => "/dashboard/calificar-actividades",
+            "duplicar" => "/dashboard/duplicar-actividades",
+            "foro" => "/dashboard/foro",
+            _ => "/dashboard/inicio"
         };
-        
         Navigation.NavigateTo(ruta, forceLoad: false);
         StateHasChanged();
     }

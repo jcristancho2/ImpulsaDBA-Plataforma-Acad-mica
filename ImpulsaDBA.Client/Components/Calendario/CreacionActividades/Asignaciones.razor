@@ -16,8 +16,8 @@
     <div class="modal-overlay" 
          @onclick="CerrarModal"
          role="presentation">
-        <div class="modal-container modal-large" 
-             @onclick:stopPropagation="true"             @onkeydown="OnModalKeyDown"             role="dialog"
+        <div id="modal-asignaciones-container" class="modal-container modal-large" 
+             @onclick:stopPropagation="true" @onkeydown="OnModalKeyDown" role="dialog"
              aria-modal="true"
              aria-labelledby="modal-asignaciones-title">
             <div class="modal-header">
@@ -482,6 +482,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (Mostrar)
+        {
+            try { await JSRuntime.InvokeVoidAsync("impulsaAccActivateModalTrap", "modal-asignaciones-container"); } catch { }
+        }
         if (Mostrar && !string.IsNullOrEmpty(editorId) && !editorInitialized)
         {
             // Marcar de inmediato para evitar doble inicialización (varias toolbars)
@@ -829,6 +833,7 @@
 
     private async Task CerrarModal()
     {
+        try { await JSRuntime.InvokeVoidAsync("impulsaAccDeactivateModalTrap"); } catch { }
         // Destruir instancia de Quill antes de limpiar (evita toolbars duplicados al reabrir)
         var idToDestroy = editorId;
         if (!string.IsNullOrEmpty(idToDestroy))

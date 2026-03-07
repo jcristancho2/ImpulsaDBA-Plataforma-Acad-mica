@@ -56,6 +56,9 @@
     .dashboard-page {
         max-width: 1400px;
         margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 1rem 0.5rem;
     }
 
     .page-header {
@@ -98,13 +101,13 @@
 
     .asignaturas-container {
         max-height: calc(100vh - 12rem);
-        overflow-y: auto;
         overflow-x: hidden;
+        padding: 1rem 0.5rem;
     }
 
     .asignaturas-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1.5rem;
     }
 
