@@ -391,18 +391,18 @@ html {
 :root.high-contrast input[type="button"],
 :root.high-contrast input[type="submit"],
 :root.high-contrast input[type="reset"] {
-    background-color: #E9BB33;
-    color: #FFFFFF;
+
     border-color: #ffffff;
     border-width: 2px;
     border-radius: var(--border-radius-xl);
+    background-color: rgba(0, 0, 0, 0);
 }
 
 :root.high-contrast button:hover,
 :root.high-contrast input[type="button"]:hover,
 :root.high-contrast input[type="submit"]:hover,
 :root.high-contrast input[type="reset"]:hover {
-    background-color: #E9BB33;
+    background-color: #e0bb33;
     color: var(--color-text-secondary);
 }
 
@@ -462,14 +462,14 @@ html {
 }
 
 :root.high-contrast .btn-success {
-    background-color: #00ff00;
+    background-color: #e678aa;
     color: #000000;
     border-color: #ffffff;
     border-width: 2px;
 }
 
 :root.high-contrast .btn-danger {
-    background-color: #ff0000;
+    background-color: #23caba;
     color: #ffffff;
     border-color: #ffffff;
     border-width: 2px;
@@ -502,13 +502,13 @@ html {
 
 :root.high-contrast .alert-success {
     background-color: #000000;
-    color: #00ff00;
+    color: #e678aa;
     border-color: #ffffff;
 }
 
 :root.high-contrast .alert-danger {
     background-color: #000000;
-    color: #ff0000;
+    color: #23caba;
     border-color: #ffffff;
 }
 
@@ -522,6 +522,20 @@ html {
     background-color: #000000;
     color: #00ffff;
     border-color: #ffffff;
+}
+
+/* Alto contraste: imágenes con borde visible y contraste aumentado */
+:root.high-contrast img {
+    border: 2px solid #ffffff;
+    outline: 1px solid #E9BB33;
+    outline-offset: 1px;
+    filter: contrast(1.15);
+}
+
+:root.high-contrast img:hover,
+:root.high-contrast img:focus-visible {
+    outline: 2px solid #E9BB33;
+    outline-offset: 2px;
 }
 
 :root.high-contrast .card {
@@ -564,6 +578,35 @@ html {
     color: #ffffff;
     border-color: #ffffff;
     border-width: 2px;
+}
+
+/* Calendario: forzar con !important para ganar a los estilos con scope del componente */
+:root.high-contrast .btn-crear-actividad {
+    background-color: #ff00ff !important;
+    color: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
+:root.high-contrast .sin-actividades {
+    background-color: #090909 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+:root.high-contrast .calendario-vistas-container {
+    background-color: #090909 !important;
+    color: #e9bb33 !important;
+    border: 2px solid #ffffff !important;
+}
+
+:root.high-contrast .calendario-vistas-container .btn-vista,
+:root.high-contrast .calendario-vistas-container .btn-vista i {
+    color: #000000 !important;
+}
+
+:root.high-contrast .calendario-vistas-container .btn-vista.activa,
+:root.high-contrast .calendario-vistas-container .btn-vista.activa i {
+    color: #E9BB33 !important;
 }
 
 :root.high-contrast .nav-link {
@@ -659,10 +702,14 @@ html {
 }
 
 :root.high-contrast .dashboard-sidebar .nav-item.active {
-    background-color: #cccc00;
+    background-color: #4a2610;
     color: #E9BB33;
 }
 
+:root.high-contrast .calendario-vistas {
+    background-color: #090909;
+    color: #E9BB33;
+}
 :root.high-contrast .dashboard-sidebar .nav-item-tooltip {
     background-color: #E9BB33;
     color: #000000;
@@ -708,12 +755,36 @@ html {
     color: #E9BB33;
 }
 
+/* Header: iconos visibles sobre fondo negro (blanco o amarillo) */
+:root.high-contrast .header-right {
+    background-color: transparent;
+}
+
 :root.high-contrast .header-icon-btn {
-    color: #000000;
+    color: #ffffff !important;
+    background-color: transparent !important;
 }
 
 :root.high-contrast .header-icon-btn:hover {
-    color: #000000;
+    color: #E9BB33 !important;
+    background-color: rgba(233, 187, 51, 0.2) !important;
+}
+
+/* Ayudas: icono visible por defecto en alto contraste (no solo al hover) */
+:root.high-contrast .ayudas-icon-wrapper,
+:root.high-contrast .ayudas-icon-wrapper i {
+    color: #090909 !important;
+    background-color: #e9bb33 !important;
+    border-radius: var(--border-radius-round) !important;
+}
+
+:root.high-contrast .ayudas-button {
+    color: #E9BB33 !important;
+}
+
+:root.high-contrast .ayudas-button:hover .ayudas-icon-wrapper,
+:root.high-contrast .ayudas-button:hover .ayudas-icon-wrapper i {
+    color: #ffffff !important;
 }
 
 :root.high-contrast .dashboard-content {
@@ -724,6 +795,7 @@ html {
 /* Barra de accesibilidad en alto contraste */
 :root.high-contrast .accessibility-bar-container {
     background-color: #E9BB33;
+    border-radius: 16px 0 0 16px;
 
 }
 
@@ -767,6 +839,70 @@ html {
 
 :root.high-contrast .action-card:active {
     border: 2px solid #E9BB33;
+}
+
+/* Alto contraste: tarjetas de asignatura (CardAsignatura) - borde */
+:root.high-contrast .asignatura-card {
+    border: 2px solid #ffffff;
+    background-color: #000000;
+    color: #ffffff;
+}
+:root.high-contrast .asignatura-card:hover {
+    border-color: #E9BB33;
+}
+:root.high-contrast .asignatura-card:focus-visible {
+    outline: 3px solid #E9BB33;
+    outline-offset: 2px;
+}
+:root.high-contrast .asignatura-info-container {
+    border: 1px solid #ffffff;
+}
+:root.high-contrast .asignatura-activities {
+    border: 1px solid #ffffff;
+    border-top-color: #ffffff;
+}
+
+/* Alto contraste: fondo y borde de los días del calendario (vista mes, semana, día) */
+:root.high-contrast .calendario-dia-semana,
+:root.high-contrast .calendario-dia {
+    background-color: #000000 !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+:root.high-contrast .calendario-dia-semana:hover,
+:root.high-contrast .calendario-dia:hover {
+    background-color: #1a1a1a !important;
+    border-color: #E9BB33 !important;
+}
+:root.high-contrast .calendario-dia.dia-vacio {
+    background-color: transparent !important;
+    border: 1px dashed #666 !important;
+}
+:root.high-contrast .calendario-dia.dia-otro-mes {
+    background-color: #0a0a0a !important;
+    border-color: #666 !important;
+    opacity: 0.7;
+}
+:root.high-contrast .calendario-dia.dia-pasado,
+:root.high-contrast .calendario-dia-semana.dia-pasado {
+    background-color: #1a1a1a !important;
+    border-color: #666 !important;
+    color: #999 !important;
+    opacity: 0.8;
+}
+:root.high-contrast .calendario-dia.dia-hoy,
+:root.high-contrast .calendario-dia-semana.dia-hoy {
+    background-color: #E9BB33 !important;
+    border-color: #ffffff !important;
+    color: #000000 !important;
+}
+:root.high-contrast .dia-semana-header,
+:root.high-contrast .dia-numero {
+    color: #ffffff;
+}
+:root.high-contrast .calendario-dia.dia-hoy .dia-numero,
+:root.high-contrast .calendario-dia-semana.dia-hoy .dia-numero {
+    color: #000000;
 }
 
 :root.large-text {
@@ -848,6 +984,7 @@ body {
 
 /* Contenedores principales: usan escala tipográfica para accesibilidad (aumentar/disminuir texto) */
 .dashboard-content,
+.sidebar-content,
 .dashboard-main,
 .calendario-page,
 .calendario-container,
